@@ -27,7 +27,7 @@ We are using mustard data. Download the following:
 YCB Video Data: https://archive.cs.rutgers.edu/archive/a/2020/pracsys/Bowen/iros2020/YCB_Video_data_organized/0050.tar.gz
 Ply Files: https://archive.cs.rutgers.edu/pracsys/se3_tracknet/YCB_models_with_ply.zip
 Synthetic Training Data: https://archive.cs.rutgers.edu/archive/a/2020/pracsys/Bowen/iros2020/YCB_traindata/mustard_bottle.tar.gz
-
+Weights: Download Pretrained Weights on YCB Video data.
 
 ### Running the code:
 ```
