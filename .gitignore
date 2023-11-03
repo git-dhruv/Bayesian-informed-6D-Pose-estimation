@@ -1,2 +1,4 @@
 data/*
 logs/*
+iros20-6d-pose-tracking/*
+weights/*
