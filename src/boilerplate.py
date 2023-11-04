@@ -2,13 +2,17 @@
 # -*- coding: utf-8 -*-
 
 """
-processDepth.py: Depth Completion Module
-
-Unsupervised Depth Completion
+boilerplate.py: Boiler plate template for this project
 """
 
 import sys
 import logging
+
+# Module constants
+# CONSTANT_1 = "value"
+
+# Module "global" variables
+# global_var = None
 
 class MyClass:
     """
