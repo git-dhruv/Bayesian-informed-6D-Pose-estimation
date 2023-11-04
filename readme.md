@@ -6,6 +6,8 @@
 - Network architecture
 - Logging
 - Data (Dataloader, Augmentations and OpenGL rendering)
+- Profiling
+- Ablation Studies (Depth Completion Ablations are done)
 
 # Documentation
 

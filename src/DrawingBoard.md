@@ -17,3 +17,8 @@ dataset_info considers data about size of the dataset, .ply file, intrinsics and
 
 ### Data Augmentations
 Depths are normalized, images are normalized. These are non trivial here, and needs to be handled carefully in the dataset. For a unit testing scenario, a custom test pipeline needs to be created with openGL rendering before starting to train. 
+
+
+## Left off
+Wait for the author to clarify on Frames in dataloader. Next steps are data augmentation tests, and inference replication of the pretrained model.
+ 
