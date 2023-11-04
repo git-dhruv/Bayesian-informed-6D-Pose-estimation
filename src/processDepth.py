@@ -10,21 +10,18 @@ Unsupervised Depth Completion
 import sys
 import logging
 
-class MyClass:
+class depthCompletion:
     """
-    A simple example class with standard methods and documentation.
-    """
-    
-    def __init__(self, attribute1, attribute2):
-        """
-        Initialize the MyClass instance with attribute1 and attribute2.
-        """
-        self.attribute1 = attribute1
-        self.attribute2 = attribute2
+    Unsuperivsed Depth completion
+    Reference: 
+        J. Ku, et al., "In Defense of Classical Image Processing: Fast Depth Completion on the CPU," 2018.
+    """    
+    def __init__(self):
+        pass
 
 
 def main()->None:    
-    my_object = MyClass("value1", "value2")
+    processDepth = depthCompletion()
 
 if __name__ == "__main__":
     # Configure logging
