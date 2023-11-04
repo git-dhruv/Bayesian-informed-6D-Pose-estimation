@@ -4,7 +4,8 @@
 - ~~Depth Completion~~
 - Classical 6D ICP with covariance
 - Network architecture
-
+- Logging
+- Data (Dataloader, Augmentations and OpenGL rendering)
 
 # Documentation
 

@@ -116,7 +116,29 @@ class dataloader(Dataset):
 
     ### Workhorse of the code begin from below ###
     def getSynthData(self, idx):        
-        return 1
+        rgbA = cv2.imread(self.files['rgbA'][idx], cv2.IMREAD_UNCHANGED)
+        depthA = np.int64(cv2.imread(self.files['depthA'][idx], cv2.IMREAD_UNCHANGED))
+        rgbB = cv2.imread(self.files['rgbA'][idx], cv2.IMREAD_UNCHANGED)
+        depthB = np.int64(cv2.imread(self.files['depthA'][idx], cv2.IMREAD_UNCHANGED))
+        meta = np.load(self.files['npzFiles'])
+        C_H_A = None #Pose of Object A in Camera frame - A and B is the worst naming convention
+        C_H_B = None 
+        for file in meta.files:
+            if 'A' in file:
+                C_H_A = meta[file]
+            if 'B' in file:
+                C_H_B = meta[file]
+        if C_H_A is None or C_H_B is None:
+            raise Exception (f"Can't find ground truth pose for num: {idx}")
+        
+        rgbA = self.datatransform(rgbA); rgbB = self.datatransform(rgbB)
+        depthA = self.datatransform(depthA);depthB = self.datatransform(depthB)
+        Velocity = C_H_B[:3,-1] - C_H_A[:3,-1]
+        LieAlgebra = C_H_B[:3,:3]@C_H_A[:3,:3].T
+        C_H_A = self.labeltransform(C_H_A);C_H_B = self.labeltransform(C_H_B) 
+
+        return rgbA, rgbB, depthA, depthB, C_H_A, C_H_B
+        
 
     def getRealData(self, idx):
         """
@@ -132,7 +154,7 @@ class dataloader(Dataset):
         
         rgb = self.datatransform(rgb)
         depth = self.datatransform(depth)
-        
+
         return rgb, depth, gt, K
     
     
@@ -149,9 +171,9 @@ def main()->None:
     labeltransform = None
     maxLen = None
     loader = dataloader(root, mode, datatype, config, datatransform, labeltransform, classId, maxLen)
-    train_loader = torch.utils.data.DataLoader(loader, shuffle=False, batch_size=1)
+    train_loader = torch.utils.data.DataLoader(loader, shuffle=True, batch_size=10)
     for data in train_loader:
-        print(data)
+        print(len(data[0]))
         break
 
 
