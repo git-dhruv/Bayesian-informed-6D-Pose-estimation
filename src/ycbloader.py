@@ -10,8 +10,13 @@ import torch
 from torchvision import transforms
 import yaml
 from torch.utils.data.dataset import Dataset
+import os
+from os.path import join as opj
+import glob
+import numpy as np
+from typing import Dict, Any
 
-def handlePath(root, datatype):
+def handlePath(root, isSynthetic, classId=5)-> Dict[str, Any]:
     """
     Handles the Path of different datatypes. Synthetic Data has different folder structure while video has different.
     
@@ -19,11 +24,26 @@ def handlePath(root, datatype):
     ----------
     root : str
         Root Dir of the data
-    type: bool
+    isSynthetic: bool
         Set to True for Synthetic, False for Real (video).
+    classId:
+        id of class that are there in pose_gt of video data
     """
+    data = {}
+    if isSynthetic:
+        data['rgbA'] = sorted(glob.glob(opj(root, '*rgbA.png')))
+        data['rgbB'] = sorted(glob.glob(opj(root, '*rgbB.png')))
+        data['depthA'] = sorted(glob.glob(opj(root, '*depthA.png')))
+        data['depthB'] = sorted(glob.glob(opj(root, '*depthB.png')))
+        data['npzFiles'] = sorted(glob.glob(opj(root, '*meta.npz')))
+    else:
+        data['rgb'] = sorted(glob.glob(opj(root, 'color/*.png')))
+        data['depth'] = sorted(glob.glob(opj(root, 'depth/*.png')))
+        data['pose_gt'] = sorted(glob.glob(opj(root, f'pose_gt/{classId}/*.txt')))
+        data['K'] = opj(root, "cam_K.txt")
 
-    pass
+
+    return data
 
 class dataloader(Dataset):
     """

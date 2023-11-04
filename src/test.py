@@ -59,3 +59,8 @@ for i in A:
     else:
         trans = np.row_stack((trans,i.reshape(1,-1)))
 print(np.std(trans*180/3.14, axis=0))
+
+
+a = np.load(r"C:\Users\dhruv\Desktop\680Final\data\mustard_bottle\validation_data_blender_DR\0000004meta.npz")
+for file in a.files:
+    print(a[file])
