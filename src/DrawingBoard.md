@@ -8,3 +8,6 @@ Parameters:
 - Kernel5, kernal7 and *kernel17* is used instead of kernal31. 
 
 The reason for choosing kernal17 was that it was less distorting the depth map (although it didnt matter on the object)
+
+
+## Dataset

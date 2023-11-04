@@ -5,6 +5,10 @@
 processDepth.py: Depth Completion Module
 
 Unsupervised Depth Completion
+
+@author: Dhruv Parikh
+@date: 4th Nov 2023
+@org: University of Pennsylvania
 """
 
 import sys
