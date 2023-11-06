@@ -153,13 +153,6 @@ class dataloader(Dataset):
         depth = (cv2.imread(self.files['depth'][idx], cv2.IMREAD_UNCHANGED)).astype(np.float64)
         gt = np.loadtxt(self.files['pose_gt'][idx])
         K = np.loadtxt(self.files['K'][0])     
-        
-        # rgb, depth, gt = self.datatransform([rgb, depth, gt])
-        # rgb = transforms.ToTensor()(rgb)
-        # depth = transforms.ToTensor()(depth)
-
-        # depth = self.datatransform(rgb, depth, gt)
-
         return rgb, depth, gt, K
     
     def stackRGBD(self, rgb, d):
