@@ -20,6 +20,7 @@ import glob
 import numpy as np
 from typing import Dict, Any
 import cv2
+from PIL import Image
 
 def handlePath(root, isSynthetic, classId=5, mode=0)-> Dict[str, Any]:
     """
@@ -146,16 +147,27 @@ class dataloader(Dataset):
         On real data we need to render synthetic image using openGL render, which requires a lot more arguments, 
         and thus is avoided in this method to be invoked by a shared call of get_item 
         """
-
-        rgb = cv2.imread(self.files['rgb'][idx], cv2.IMREAD_UNCHANGED)
-        depth = np.int64(cv2.imread(self.files['depth'][idx], cv2.IMREAD_UNCHANGED))
+        
+        # rgb = cv2.imread(self.files['rgb'][idx], cv2.IMREAD_UNCHANGED)
+        rgb = np.array(Image.open(self.files['rgb'][idx]))
+        depth = (cv2.imread(self.files['depth'][idx], cv2.IMREAD_UNCHANGED)).astype(np.float64)
         gt = np.loadtxt(self.files['pose_gt'][idx])
         K = np.loadtxt(self.files['K'][0])     
         
-        rgb = self.datatransform(rgb)
-        depth = self.datatransform(depth)
+        # rgb, depth, gt = self.datatransform([rgb, depth, gt])
+        # rgb = transforms.ToTensor()(rgb)
+        # depth = transforms.ToTensor()(depth)
+
+        # depth = self.datatransform(rgb, depth, gt)
 
         return rgb, depth, gt, K
+    
+    def stackRGBD(self, rgb, d):
+        #This function should work on batches 
+        # targetSize = (rgb.size(0), rgb.size(1) + 1, rgb.size(2), rgb.size(3))
+        rgbd = torch.cat((rgb, d), dim=1)
+        # assert rgbd.size() == targetSize , "stackRGBD can't give correct output"
+        return rgbd
     
     
 
@@ -171,9 +183,9 @@ def main()->None:
     labeltransform = None
     maxLen = None
     loader = dataloader(root, mode, datatype, config, datatransform, labeltransform, classId, maxLen)
-    train_loader = torch.utils.data.DataLoader(loader, shuffle=True, batch_size=10)
+    train_loader = torch.utils.data.DataLoader(loader, shuffle=True, batch_size=1)
     for data in train_loader:
-        print(len(data[0]))
+        print(data)
         break
 
 

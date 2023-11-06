@@ -20,5 +20,17 @@ Depths are normalized, images are normalized. These are non trivial here, and ne
 
 
 ## Left off
-Wait for the author to clarify on Frames in dataloader. Next steps are data augmentation tests, and inference replication of the pretrained model.
- 
+~Wait for the author to clarify on Frames in dataloader.~ No response from author
+
+- Next steps are data augmentation tests, and inference replication of the pretrained model.
+Inference replicated with the functions from orignal code with horrible depth map. Noticeable improvement with depth completion with better kernels
+
+
+
+
+### Pipeline
+Currently replicating the tracknet inference code, but build on it to make a state based framework
+
+
+## Possible Bugs
+Paper transforms the data after cropping. I am assuming in rgb its fine, but teh normalize depth function might cause problem(?) if the order is reversed. 
