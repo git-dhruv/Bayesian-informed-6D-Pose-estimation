@@ -25,7 +25,7 @@ from copy import deepcopy
 
 ## Custom Module ##
 from processDepth import depthCompletion
-from ycbloader import dataloader, datamanipulator
+from ycbloader import dataloader
 
 
 sys.path.append(r"C:\Users\dhruv\Desktop\680Final\iros20-6d-pose-tracking")
@@ -33,7 +33,7 @@ sys.path.append(r"C:\Users\dhruv\Desktop\680Final\iros20-6d-pose-tracking")
 import se3_tracknet
 from render import VispyRenderer
 import trimesh
-from data_augmentation import *
+from manipulation import *
 import utils
 
 import numpy as np

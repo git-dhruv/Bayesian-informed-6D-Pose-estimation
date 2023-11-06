@@ -169,14 +169,6 @@ class dataloader(Dataset):
         # assert rgbd.size() == targetSize , "stackRGBD can't give correct output"
         return rgbd
     
-    
-class datamanipulator:
-    def __init__(self):
-        pass
-
-
-    
-
 
 def main()->None:    
     root = r"data\0050"

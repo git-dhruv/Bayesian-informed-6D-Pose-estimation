@@ -102,7 +102,7 @@ class VispyRenderer(app.Canvas):
 			assert face_indices.shape[1]==3
 			vertex_color = np.stack((ply['vertex']['red'].reshape(-1), ply['vertex']['green'].reshape(-1), ply['vertex']['blue'].reshape(-1)), axis=-1)
 			vertex_normal = np.stack((ply['vertex']['nx'].reshape(-1), ply['vertex']['ny'].reshape(-1), ply['vertex']['nz'].reshape(-1)), axis=-1)
-			vertex_normal = vertex_normal/np.linalg.norm(vertex_normal, axis=1).reshape(-1,1)
+			vertex_normal = vertex_normal/(1e-6+np.linalg.norm(vertex_normal, axis=1).reshape(-1,1))
 		else:
 			print('vispy model_path has to be a ply file')
 			raise RuntimeError
