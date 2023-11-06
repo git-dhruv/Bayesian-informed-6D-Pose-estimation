@@ -4,7 +4,7 @@
 """
 @file: main.py
 @author: Dhruv Parikh
-@
+@ I made the code worse than the orignal one :)
 """
 
 
@@ -31,11 +31,10 @@ from ycbloader import dataloader
 sys.path.append(r"C:\Users\dhruv\Desktop\680Final\iros20-6d-pose-tracking")
 
 import se3_tracknet
-from vispy_renderer import VispyRenderer
-import Utils as U
+from render import VispyRenderer
 import trimesh
 from data_augmentation import *
-
+import utils
 
 
 def project_points(points,K):
@@ -62,8 +61,9 @@ class Bayesian6D:
         
         """
         self.network_in_size = (config['resolution'],config['resolution'])
+        self.pclUtils = utils.pointCloudUtils()
         mesh = trimesh.load(meshfile)
-        self.pointcloud = U.toOpen3dCloud(mesh.vertices).voxel_down_sample(voxel_size = 0.005)
+        self.pointcloud = self.pclUtils.toOpen3dCloud(mesh.vertices).voxel_down_sample(voxel_size = 0.005)
 
         self.objectwidth = config['object_width']
         self.mean = imagemean 
@@ -100,33 +100,32 @@ class Bayesian6D:
 
 
         self.depthfix = depthCompletion(5, None, None, None, None)
+        self.inputModification = utils.inputImageHandler(self.network_in_size, self.objectwidth, self.K)
+        
 
-    def render_window(self, ob2cam):
+    def renderObject(self, CV_H_Ob):
         '''
-        @ob2cam: 4x4 mat ob in opencv cam
+        This function simulates the situation in openGL
         '''
-        glcam_in_cvcam = np.array([[1,0,0,0],
+        CV_H_GL = np.array([[1,0,0,0],
                                 [0,-1,0,0],
                                 [0,0,-1,0],
                                 [0,0,0,1]])
-        bbox = U.compute_bbox(ob2cam, self.K, self.objectwidth, scale=(1000, -1000, 1000))
-        ob2cam_gl = np.linalg.inv(glcam_in_cvcam).dot(ob2cam)
-        left = np.min(bbox[:, 1])
-        right = np.max(bbox[:, 1])
-        top = np.min(bbox[:, 0])
-        bottom = np.max(bbox[:, 0])
+        #Calculate Bounding Box around the Pose
+        bbox = self.inputModification.compute_bbox(CV_H_Ob, self.K, self.objectwidth, scale=(1000, -1000, 1000))
+        #Convert Object from OpenCV camera to GL
+        ob2cam_gl = np.linalg.inv(CV_H_GL).dot(CV_H_Ob) #GL_H_CV @ CV@H_Ob = GL_H_Ob
+        left = np.min(bbox[:, 1]);right = np.max(bbox[:, 1]);top = np.min(bbox[:, 0]);bottom = np.max(bbox[:, 0])
+        #Update the Projection Matrix of OpenGL
         self.renderer.update_cam_mat(self.K, left, right, bottom, top)
-        render_rgb, render_depth = self.renderer.render_image(ob2cam_gl)
-        return render_rgb, render_depth
+        #Render the image
+        rgb, depth = self.renderer.render_image(ob2cam_gl)
+        return rgb, depth
     
-    def cropImage(self, rgb, depth, pose):
-        bb = U.compute_bbox(pose, self.K, self.objectwidth, scale = (1000,1000,1000))
-        #Not how it should be done but whatever
-        return U.crop_bbox(rgb[0].cpu().numpy(), depth[0].cpu().numpy(), bb, self.network_in_size)
-
     def singlePass(self, pose, rgb, depth):
         #Current images have been cropped on the current state update vector
-        rgb, depth = self.cropImage(rgb, depth, pose)
+        rgb, depth = self.inputModification.cropImage(rgb, depth, pose, scale = (1000,1000,1000))
+        
 
         # depth = self.depthfix.fillDepth(depth) #Makes surreal difference (inactive till robust pipeline made)
 
@@ -134,7 +133,7 @@ class Bayesian6D:
         rgb, depth,_ = tmp([rgb, depth, pose])
 
         #Prev images rendered
-        rgb_prev, depth_prev = self.render_window(pose)
+        rgb_prev, depth_prev = self.renderObject(pose)
         tmp = transforms.Compose([OffsetDepthDhruv(), NormalizeChannelsRender(self.mean, self.std)])
         rgb_prev, depth_prev,_ = tmp([rgb_prev, depth_prev, pose])
         
