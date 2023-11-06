@@ -1,3 +1,7 @@
+"""
+TO BE DELETED ON RELEASE
+Temp script to test my snippets
+"""
 import numpy as np
 from scipy.spatial.transform import Rotation
 A = [np.array([[-0.16658794,-0.98439172,0.05675115,0.03130435],

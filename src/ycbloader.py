@@ -170,7 +170,12 @@ class dataloader(Dataset):
         return rgbd
     
     
+class datamanipulator:
+    def __init__(self):
+        pass
 
+
+    
 
 
 def main()->None:    

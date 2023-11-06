@@ -25,7 +25,7 @@ from copy import deepcopy
 
 ## Custom Module ##
 from processDepth import depthCompletion
-from ycbloader import dataloader
+from ycbloader import dataloader, datamanipulator
 
 
 sys.path.append(r"C:\Users\dhruv\Desktop\680Final\iros20-6d-pose-tracking")
@@ -36,13 +36,7 @@ import trimesh
 from data_augmentation import *
 import utils
 
-
-def project_points(points,K):
-  us = np.divide(points[:,0]*K[0,0],points[:,2]) + K[0,2]
-  vs = np.divide(points[:,1]*K[1,1],points[:,2]) + K[1,2]
-  us = np.round(us).astype(np.int32).reshape(-1,1)
-  vs = np.round(vs).astype(np.int32).reshape(-1,1)
-  return np.hstack((us,vs))
+import numpy as np
 
 class Bayesian6D:
     """
@@ -101,6 +95,7 @@ class Bayesian6D:
 
         self.depthfix = depthCompletion(5, None, None, None, None)
         self.inputModification = utils.inputImageHandler(self.network_in_size, self.objectwidth, self.K)
+        self.imgOps = utils.imageOps()
         
 
     def renderObject(self, CV_H_Ob):
@@ -108,9 +103,9 @@ class Bayesian6D:
         This function simulates the situation in openGL
         '''
         CV_H_GL = np.array([[1,0,0,0],
-                                [0,-1,0,0],
-                                [0,0,-1,0],
-                                [0,0,0,1]])
+                            [0,-1,0,0],
+                            [0,0,-1,0],
+                            [0,0,0,1]])
         #Calculate Bounding Box around the Pose
         bbox = self.inputModification.compute_bbox(CV_H_Ob, self.K, self.objectwidth, scale=(1000, -1000, 1000))
         #Convert Object from OpenCV camera to GL
@@ -157,14 +152,8 @@ class Bayesian6D:
         #Transform PCL using Pose
         model = deepcopy(self.pointcloud)
         model.transform(pose)
-        def project_points(points,K):
-            us = np.divide(points[:,0]*K[0,0],points[:,2]) + K[0,2]
-            vs = np.divide(points[:,1]*K[1,1],points[:,2]) + K[1,2]
-            us = np.round(us).astype(np.int32).reshape(-1,1)
-            vs = np.round(vs).astype(np.int32).reshape(-1,1)
-            return np.hstack((us,vs))
 
-        uvs = project_points(np.asarray(model.points),self.K)
+        uvs = self.imgOps.bckPrjctFromK(self.K, np.asarray(model.points))
         cur_bgr = cv2.cvtColor(rgb,cv2.COLOR_RGB2BGR)
         for ii in range(len(uvs)):
             cv2.circle(cur_bgr,(uvs[ii,0],uvs[ii,1]),radius=1,color=(0,0,255),thickness=-1)

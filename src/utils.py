@@ -105,3 +105,26 @@ class pointCloudUtils:
         if colors is not None:
             cloud.colors = o3d.utility.Vector3dVector(colors.astype(np.float64)/255.0)
         return cloud
+
+class imageOps:
+    def __init__(self):
+        pass
+
+    def toHomogenous(self, pts):
+        return np.hstack((pts, np.ones((pts.shape[0], 1))))
+    
+    def bckPrjctFromK(self, K, pts):
+        homogeneous_points = self.toHomogenous(pts)
+        projected_points = np.dot(K@np.eye(4)[:3,:], homogeneous_points.T).T
+        projected_points[:, 0] /= projected_points[:, 2]
+        projected_points[:, 1] /= projected_points[:, 2]
+        projected_points = np.round(projected_points[:, :2]).astype(np.int32)
+        return projected_points
+
+
+    def bckPrjctFromP(self, K, pose, pts):
+        # pts is 4XN or 3XN
+        if pts.shape[0] != 4:
+            pts = self.toHomogenous(pts)        
+        return K@(pose@pts)
+
