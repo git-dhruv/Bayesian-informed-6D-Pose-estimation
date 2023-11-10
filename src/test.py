@@ -1,3 +1,7 @@
+"""
+TO BE DELETED ON RELEASE
+Temp script to test my snippets
+"""
 import numpy as np
 from scipy.spatial.transform import Rotation
 A = [np.array([[-0.16658794,-0.98439172,0.05675115,0.03130435],
@@ -59,3 +63,9 @@ for i in A:
     else:
         trans = np.row_stack((trans,i.reshape(1,-1)))
 print(np.std(trans*180/3.14, axis=0))
+
+
+a = np.load(r"C:\Users\dhruv\Desktop\680Final\data\mustard_bottle\validation_data_blender_DR\0000004meta.npz")
+for file in a.files:
+    print(file)
+    print(a[file])

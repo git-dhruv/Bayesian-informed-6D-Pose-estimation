@@ -39,7 +39,7 @@ class depthCompletion:
         if full_7 is None:
             full_7 = np.ones((7, 7), np.uint8)
         if full_31 is None:
-            full_31 = np.ones((31, 31), np.uint8)
+            full_31 = np.ones((17, 17), np.uint8)
 
         self.custom_kernel = custom_kernel
         self.full_kernel_5 = full_5

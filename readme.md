@@ -4,7 +4,10 @@
 - ~~Depth Completion~~
 - Classical 6D ICP with covariance
 - Network architecture
-
+- Logging
+- Data (Dataloader, Augmentations and OpenGL rendering)
+- Profiling
+- Ablation Studies (Depth Completion Ablations are done)
 
 # Documentation
 
@@ -35,3 +38,7 @@ cd iros20-6d-pose-tracking
 python predict.py --mode ycbv --ycb_dir C:\Users\dhruv\Desktop\680Final\data\ --seq_id 50 --train_data_path C:\Users\dhruv\Desktop\680Final\data\mustard_bottle\train_data_blender_DR --ckpt_dir C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\model_epoch150.pth.tar --mean_std_path C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle --class_id 5 --model_path C:\Users\dhruv\Desktop\680Final\data\CADmodels\006_mustard_bottle\textured.ply --outdir C:\Users\dhruv\Desktop\680Final\logs
 ```
 Don't change class id. 
+
+
+# WARNING!!
+Current code is extremely unstable and would probably not run in any system except mine (I haven't even uploaded some files for a start). 
