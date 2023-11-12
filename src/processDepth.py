@@ -17,6 +17,21 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
+def diamondBuiscuit():
+    # Diamond Kernel Maker
+    size = 3
+    center = size // 2  
+
+    diamond_kernel = np.zeros((size, size), dtype=np.uint8)
+
+    for i in range(center + 1):
+        # Starting from the center, set "1"s moving outwards to form the upper half of the diamond
+        diamond_kernel[center - i, (center - i):(center + i + 1)] = 1
+        # Mirror the upper half to form the bottom half of the diamond
+        diamond_kernel[center + i, (center - i):(center + i + 1)] = 1
+    return diamond_kernel
+
+
 class depthCompletion:
     """
     Unsuperivsed Depth completion
@@ -34,12 +49,13 @@ class depthCompletion:
                                         [0, 1, 1, 1, 1, 1, 0],
                                         [0, 0, 1, 1, 1, 0, 0],
                                         [0, 0, 0, 1, 0, 0, 0],], dtype=np.uint8)
+
         if full_5 is None:
             full_5 = np.ones((5, 5), np.uint8)
         if full_7 is None:
             full_7 = np.ones((7, 7), np.uint8)
         if full_31 is None:
-            full_31 = np.ones((17, 17), np.uint8)
+            full_31 = np.ones((31, 31), np.uint8)
 
         self.custom_kernel = custom_kernel
         self.full_kernel_5 = full_5
@@ -50,49 +66,39 @@ class depthCompletion:
         #Convert the mm to meters to be consistent with the paper
         img = np.float32(inputImage.copy())/1e3
 
+        self.max_depth = img.max()*1.2
+        #Threshold to maxDepth
+        # img[img>self.max_depth] = self.max_depth
+
         #Valid image mask - 10 cm away
-        valid_depth_mask = img>0.01
+        valid_depth_mask = img>1e-3
 
         #1. Invert the Depth
         img[valid_depth_mask] = self.max_depth - img[valid_depth_mask]
 
-        #2. Custom Kernel
-        img = cv2.dilate(img, self.custom_kernel)
+        #2. Custom Kernel - ruins performance on inference :)
+        # img = cv2.dilate(img, self.custom_kernel)
 
         #3. Small Hole Closure
         img = cv2.morphologyEx(img, cv2.MORPH_CLOSE, self.full_kernel_5)
         
         #4. Small Hole Fill
-        invalid_mask = img<0.01 #Remeber depth is not changed in inversion
+        invalid_mask = img<1e-3 #Remember depth is not changed in inversion
         img[invalid_mask] = cv2.dilate(img, self.full_kernel_7)[invalid_mask]        
         
         #5. Large Hole Fill (authors loose patience at this step tbh)
-        invalid_mask = img<0.01
+        invalid_mask = img<1e-3
         img[invalid_mask] = cv2.dilate(img, self.full_kernel_31)[invalid_mask]
 
         #6. Median+Bilateral
         img = cv2.medianBlur(img, 5)
-        img = cv2.bilateralFilter(img, 9, 1.5, 2.0) #Slow but better
+        img = cv2.bilateralFilter(img, 5, 1.5, 2.0) #Slow but better
 
         #8 Depth correction
-        valid_depth_mask = img>0.01
+        valid_depth_mask = img>1e-3
         img[valid_depth_mask] = self.max_depth - img[valid_depth_mask]
 
         return img*1e3
-
-def diamondBuiscuit():
-    # Diamond Kernel Maker
-    size = 5  
-    center = size // 2  
-
-    diamond_kernel = np.zeros((size, size), dtype=np.uint8)
-
-    for i in range(center + 1):
-        # Starting from the center, set "1"s moving outwards to form the upper half of the diamond
-        diamond_kernel[center - i, (center - i):(center + i + 1)] = 1
-        # Mirror the upper half to form the bottom half of the diamond
-        diamond_kernel[center + i, (center - i):(center + i + 1)] = 1
-    return diamond_kernel
 
 def main()->None:    
     #Kernels    
