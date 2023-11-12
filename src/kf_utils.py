@@ -8,6 +8,27 @@
 
 import numpy as np
 from scipy.spatial.transform import Rotation
+from utils import lieGroup
+
+def quaternion_to_matrix(quaternion):
+    """
+    Convert a quaternion to a corresponding matrix.
+    
+    Args:
+    quaternion (np.array): A quaternion in the form [qw, qx, qy, qz].
+
+    Returns:
+    np.array: The corresponding matrix.
+    """
+    qx, qy, qz, qw = quaternion
+
+    # Constructing the matrix
+    matrix = np.array([[-qx, -qy, -qz],
+                       [qw, -qz, qy],
+                       [qz, qw, -qx],
+                       [-qy, qx, qw]])
+
+    return matrix
 
 class HandleStates:
     def __init__(self, initialState, noises = None):        
@@ -15,9 +36,12 @@ class HandleStates:
         print("Estimator initialized with ", self.state)
 
         #Populating the noise matrices - Please put in the config file later!
-        self.errCov = np.eye(6,6)*1e-3 #Whatever idgaf now
-        self.Q = np.diag([1e-2, 1e-2, 1e-2, 1e-3, 1e-3, 1e-3])
-        self.R = np.diag([])
+        self.errCov = np.eye(6,6)*30 #Whatever idgaf now
+        self.Q = np.diag([1e-2, 1e-2, 1e-2, 1e-3, 1e-3, 1e-3])*30
+        self.R = np.diag([1e-2, 1e-2, 1e-2, 1e-3, 1e-3, 1e-3, 1e-3])
+
+        # Lie group utils 
+        self.lieUtils = lieGroup()
     
     def resetInitState(self, state):
         self.state = state
@@ -35,12 +59,30 @@ class HandleStates:
         self._updateNomState(liealg)
     
     def measurement(self, liegrp):
-        pass
+        #Convert Lie Group to our state vector
+        t, q = self.lieUtils.dissolveHomoTransform(liegrp)
+        msment = np.concatenate((t,q))
+        #First calculate the H matrix
+        H = np.eye(7,7)
+        Xdtheta = np.zeros((7,6))
+        Xdtheta[:3,:3] = np.eye(3)
+        Xdtheta[3:,3:] = quaternion_to_matrix(self.state[3:].flatten())/2
+        H = H@Xdtheta
 
-    def calcK(self):
-        pass
+        #Kalman Gain 
+        P = self.errCov
+        K = P@H.T@np.linalg.inv(H@P@H.T + self.R)
 
-    def _updateNomState(self, errstate):
+        # Innovation
+        innovation = np.zeros_like(self.state)
+        innovation[:3] = msment[:3] - self.state[:3]        
+        innovation[3:] = Rotation.from_matrix( Rotation.from_quat(msment[3:]).as_matrix() @ (Rotation.from_quat(self.state[3:]).as_matrix()).T ).as_quat()
+        errState = K@innovation
+
+        self.errCov = (np.eye(6,6)-K@H)@P@(np.eye(6,6)-K@H).T+K@self.R@K.T
+        self._updateNomState(errState, msm=1)
+
+    def _updateNomState(self, errstate, msm=0):
         """
         'We're all consenting adults here' - Guido van Rossum
         Please treat this method as private
@@ -50,8 +92,12 @@ class HandleStates:
         """
         self.state[:3] += errstate[:3]
         #Since we are estimating the object pose not ours!
-        rotvecUpdate = Rotation.from_rotvec(errstate[3:].flatten())*Rotation.from_quat(self.state[3:])
+        if msm:
+            rotvecUpdate = Rotation.from_rotvec(errstate[3:].flatten()).inv()*Rotation.from_quat(self.state[3:])
+        else:
+            rotvecUpdate = Rotation.from_rotvec(errstate[3:].flatten())*Rotation.from_quat(self.state[3:])
         self.state[3:] = rotvecUpdate.as_quat()
+
 
     def fetchState(self):
         return self.state.copy() 

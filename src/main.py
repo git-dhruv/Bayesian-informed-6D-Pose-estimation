@@ -86,7 +86,7 @@ class Bayesian6D:
         mode = 0
         config = "" #Where do we use this config file
         labeltransform = None
-        maxLen = 200
+        maxLen = 1000
         self.loadData = dataloader(root, mode, datatype, config, imagetransforms, labeltransform, classId, maxLen)
 
         self.transnormalize = transnormalize
@@ -132,7 +132,7 @@ class Bayesian6D:
         rgb, depth = self.inputModification.cropImage(rgb, depth, pose, scale = (1000,1000,1000))
         
 
-        # depth = self.depthfix.fillDepth(depth) #Makes surreal difference (inactive till robust pipeline made)
+        depth = self.depthfix.fillDepth(depth) #Makes surreal difference (inactive till robust pipeline made)
 
         tmp = transforms.Compose([OffsetDepthDhruv(), NormalizeChannelsReal(self.mean, self.std)])
         rgb, depth,_ = tmp([rgb, depth, pose])
@@ -205,8 +205,14 @@ class Bayesian6D:
             if idx==0:                
                 pose = gt[0].cpu().numpy()            
             pose = self.singlePass(pose, rgb.clone(), depth.clone())
-            self.visualizePrediction(pose, rgb[0].numpy())
+            
 
+            if idx%10==0:
+                self.states.measurement(gt[0].cpu().numpy())
+                # st = self.states.fetchState()
+                # pose = self.lieUtils.makeHomoTransform(st[:3], st[3:])
+
+            self.visualizePrediction(pose, rgb[0].numpy())
 
 
 
