@@ -35,7 +35,7 @@ from render import VispyRenderer
 import trimesh
 from manipulation import *
 import utils
-
+from kf_utils import HandleStates
 import numpy as np
 
 class Bayesian6D:
@@ -96,6 +96,10 @@ class Bayesian6D:
         self.depthfix = depthCompletion(5, None, None, None, None)
         self.inputModification = utils.inputImageHandler(self.network_in_size, self.objectwidth, self.K)
         self.imgOps = utils.imageOps()
+
+        self.states = HandleStates(np.eye(4)) #Can be anything for all I care
+        self.lieUtils = utils.lieGroup()
+        self.firstPassCompl = 0
         
 
     def renderObject(self, CV_H_Ob):
@@ -118,6 +122,12 @@ class Bayesian6D:
         return rgb, depth
     
     def singlePass(self, pose, rgb, depth):
+        #Pull Internal state switch
+        if self.firstPassCompl == 0:   
+            t, q = self.lieUtils.dissolveHomoTransform(pose)                     
+            self.states.resetInitState(np.concatenate((t,q)))
+            self.firstPassCompl = 1
+
         #Current images have been cropped on the current state update vector
         rgb, depth = self.inputModification.cropImage(rgb, depth, pose, scale = (1000,1000,1000))
         
@@ -170,6 +180,13 @@ class Bayesian6D:
 		@predB: trans, rot, ...
 		return ob pose in cam frame
 		'''
+        liealg = np.zeros((6,))
+        liealg[:3] = predB[0]*self.transnormalize
+        liealg[3:] = predB[1]*self.rotnormalize
+        self.states.propogate(liealg)
+        st = self.states.fetchState()
+        return self.lieUtils.makeHomoTransform(st[:3], st[3:])
+
         B_in_cam = np.eye(4)
         trans_pred = predB[0]
         rot_pred = predB[1]

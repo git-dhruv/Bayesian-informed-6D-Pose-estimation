@@ -42,3 +42,17 @@ Currently replicating the tracknet inference code, but build on it to make a sta
 
 ## Possible Bugs
 Paper transforms the data after cropping. I am assuming in rgb its fine, but teh normalize depth function might cause problem(?) if the order is reversed. - Lot more errors than expected on this part. 
+
+
+## Error State Kalman filter
+
+- Propogation using SE3Tracknet 
+    - Update Error State Covariance
+    - Update Nominal State
+- Measurment Update step from the ICP
+    - Update error state covariance
+    - Calculate Kalman Gain
+    - Update Nominal State
+
+- Tracknet is weird - gives liealgebra with dt multiplied (in a way)
+So we dont get angular velocities, we get relative pose

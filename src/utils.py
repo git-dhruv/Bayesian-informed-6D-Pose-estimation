@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import open3d as o3d
+from scipy.spatial.transform import Rotation 
 
 class lieGroup:
     """
@@ -12,11 +13,16 @@ class lieGroup:
     def constructValidRotationMatrix(self, R):
         pass
     
-    def makeHomoTransform(self, R, t):
-        pass
+    def makeHomoTransform(self, t, q):
+        R = Rotation.from_quat(q).as_matrix()
+        H = np.column_stack((R, t.reshape(-1,1)))
+        H = np.row_stack((H,np.array([[0,0,0,1]])))
+        return H
 
     def dissolveHomoTransform(self, H):
-        return
+        q = Rotation.from_matrix(H[:3,:3]).as_quat()
+        t = H[:3,-1]
+        return t,q
     
     
 
