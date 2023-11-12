@@ -28,6 +28,16 @@ def quaternion_to_matrix(quaternion):
                        [qz, qw, -qx],
                        [-qy, qx, qw]])
 
+    matrix = np.array([
+        [qw, -qz, qy],
+        [qz, qw, -qx],
+        [-qy, qx, qw],
+        [-qx, -qy, -qz]
+    ])
+
+    # print(matrix)
+    matrix = np.array([[1,0,0],[0,1,0],[0,0,1],[0,0,0]])
+
     return matrix
 
 class HandleStates:
@@ -36,9 +46,9 @@ class HandleStates:
         print("Estimator initialized with ", self.state)
 
         #Populating the noise matrices - Please put in the config file later!
-        self.errCov = np.eye(6,6)*30 #Whatever idgaf now
-        self.Q = np.diag([1e-2, 1e-2, 1e-2, 1e-3, 1e-3, 1e-3])*30
-        self.R = np.diag([1e-2, 1e-2, 1e-2, 1e-3, 1e-3, 1e-3, 1e-3])
+        self.errCov = np.eye(6,6)*1e10 #Whatever idgaf now
+        self.Q = np.diag([1e-2, 1e-2, 1e-2, 1e-3, 1e-3, 1e-3])*1e4
+        self.R = np.diag([1e-2, 1e-2, 1e-2, 1e-3, 1e-3, 1e-3, 1e-3])*1e5
 
         # Lie group utils 
         self.lieUtils = lieGroup()
@@ -75,11 +85,16 @@ class HandleStates:
 
         # Innovation
         innovation = np.zeros_like(self.state)
-        innovation[:3] = msment[:3] - self.state[:3]        
+        innovation = msment - self.state
+        # innovation[:3] = msment[:3] - self.state[:3]        
         innovation[3:] = Rotation.from_matrix( Rotation.from_quat(msment[3:]).as_matrix() @ (Rotation.from_quat(self.state[3:]).as_matrix()).T ).as_quat()
         errState = K@innovation
 
-        self.errCov = (np.eye(6,6)-K@H)@P@(np.eye(6,6)-K@H).T+K@self.R@K.T
+        # A more stable covariance update
+        self.errCov = (np.eye(6,6)-K@H)@P@(np.eye(6,6)-K@H).T + K@(self.R)@K.T
+        # import matplotlib.pyplot as plt
+        # plt.imshow(self.errCov)
+        # plt.show()
         self._updateNomState(errState, msm=1)
 
     def _updateNomState(self, errstate, msm=0):
@@ -93,9 +108,11 @@ class HandleStates:
         self.state[:3] += errstate[:3]
         #Since we are estimating the object pose not ours!
         if msm:
-            rotvecUpdate = Rotation.from_rotvec(errstate[3:].flatten()).inv()*Rotation.from_quat(self.state[3:])
+            # rotvecUpdate = Rotation.from_quat(self.state[3:])*Rotation.from_rotvec(errstate[3:].flatten()).inv()
+            rotvecUpdate = Rotation.from_rotvec(errstate[3:].flatten())*Rotation.from_quat(self.state[3:])
         else:
             rotvecUpdate = Rotation.from_rotvec(errstate[3:].flatten())*Rotation.from_quat(self.state[3:])
+        # print(Rotation.from_rotvec(errstate[3:].flatten()).as_rotvec())
         self.state[3:] = rotvecUpdate.as_quat()
 
 

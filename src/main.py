@@ -19,9 +19,9 @@ import torch
 import torch.nn.functional as F
 from torchvision import transforms
 import torch.nn as nn
-from scipy.spatial.transform import Rotation as R
 import yaml
 from copy import deepcopy
+from scipy.spatial.transform import Rotation
 
 ## Custom Module ##
 from processDepth import depthCompletion
@@ -36,7 +36,7 @@ import trimesh
 from manipulation import *
 import utils
 from kf_utils import HandleStates
-import numpy as np
+
 
 class Bayesian6D:
     """
@@ -93,7 +93,7 @@ class Bayesian6D:
         self.rotnormalize = rotnormalize
 
 
-        self.depthfix = depthCompletion(5, None, None, None, None)
+        self.depthfix = depthCompletion(30, None, None, None, None)
         self.inputModification = utils.inputImageHandler(self.network_in_size, self.objectwidth, self.K)
         self.imgOps = utils.imageOps()
 
@@ -133,6 +133,7 @@ class Bayesian6D:
         
 
         depth = self.depthfix.fillDepth(depth) #Makes surreal difference (inactive till robust pipeline made)
+        # self.visualize_depth_image(depth)
 
         tmp = transforms.Compose([OffsetDepthDhruv(), NormalizeChannelsReal(self.mean, self.std)])
         rgb, depth,_ = tmp([rgb, depth, pose])
@@ -158,7 +159,7 @@ class Bayesian6D:
 
         return self.processPredict(pose, (vel,omega))
     
-    def visualizePrediction(self, pose, rgb ):
+    def visualizePrediction(self, pose, rgb, wndname='Prediction' ):
         #Transform PCL using Pose
         model = deepcopy(self.pointcloud)
         model.transform(pose)
@@ -167,9 +168,21 @@ class Bayesian6D:
         cur_bgr = cv2.cvtColor(rgb,cv2.COLOR_RGB2BGR)
         for ii in range(len(uvs)):
             cv2.circle(cur_bgr,(uvs[ii,0],uvs[ii,1]),radius=1,color=(0,0,255),thickness=-1)
-        cv2.imshow('Prediction',cur_bgr)        
+        cv2.imshow(wndname,cur_bgr)        
         cv2.waitKey(1)
             
+    def visualize_depth_image(self,depth_image):
+        """
+        Args:
+        depth_image (numpy.ndarray): A depth image where depth is represented in some unit (e.g., millimeters).
+
+        This function normalizes the depth image to 8-bit range and displays it.
+        """
+        # Normalize the depth image to 0-255 range for visualization
+        depth_normalized = cv2.normalize(depth_image, None, 0, 255, cv2.NORM_MINMAX)
+        depth_normalized = np.uint8(depth_normalized)
+        cv2.imshow('Debug', depth_normalized)
+        cv2.waitKey(1)  
 
     def processPredict(self,A_in_cam,predB):
         '''
@@ -199,6 +212,8 @@ class Bayesian6D:
 
 
     def runPipeline(self):
+        self.poseErr = []
+
         train_loader = torch.utils.data.DataLoader(self.loadData, shuffle=False, batch_size=1)
         for idx, data in enumerate(train_loader):
             rgb, depth, gt, K = data
@@ -209,10 +224,44 @@ class Bayesian6D:
 
             if idx%10==0:
                 self.states.measurement(gt[0].cpu().numpy())
-                # st = self.states.fetchState()
-                # pose = self.lieUtils.makeHomoTransform(st[:3], st[3:])
+                st = self.states.fetchState()
+                pose = self.lieUtils.makeHomoTransform(st[:3], st[3:])
 
             self.visualizePrediction(pose, rgb[0].numpy())
+            self.poseErr.append(np.linalg.inv(pose)@gt[0].cpu().numpy())
+            # self.visualizePrediction(gt[0].cpu().numpy(), rgb[0].numpy(), 'GT')
+
+        
+        trns = np.array([i[:3,-1] for i in self.poseErr])
+        rots = np.array([Rotation.from_matrix(i[:3,:3]).as_rotvec()*180/np.pi for i in self.poseErr])
+
+        fig, axs = plt.subplots(2, 3, figsize=(15, 10))
+
+        # Translational Errors
+        axs[0, 0].hist(trns[:, 0], bins=40, color='blue')
+        axs[0, 0].set_title('Translational Error in X')
+
+        axs[0, 1].hist(trns[:, 1], bins=40, color='red')
+        axs[0, 1].set_title('Translational Error in Y')
+
+        axs[0, 2].hist(trns[:, 2], bins=40, color='green')
+        axs[0, 2].set_title('Translational Error in Z')
+
+        # Rotational Errors
+        axs[1, 0].hist(rots[:, 0], bins=40, color='blue')
+        axs[1, 0].set_title('Rotational Error around X')
+
+        axs[1, 1].hist(rots[:, 1], bins=40, color='red')
+        axs[1, 1].set_title('Rotational Error around Y')
+
+        axs[1, 2].hist(rots[:, 2], bins=40, color='green')
+        axs[1, 2].set_title('Rotational Error around Z')
+
+        plt.tight_layout()
+        plt.show()
+
+
+        
 
 
 
