@@ -9,9 +9,15 @@ class lieGroup:
     """
     def __init__(self):
         pass
-
+    
+    @staticmethod
     def constructValidRotationMatrix(self, R):
-        pass
+        """Finds the least square estimate of closed SO(3)"""
+        U,_,Vt = np.linalg.svd(R)
+        Smod = np.eye(3)
+        Smod[-1,-1] = np.linalg.det(U@Vt)
+        return U@Smod@Vt
+
     
     def makeHomoTransform(self, t, q):
         R = Rotation.from_quat(q).as_matrix()

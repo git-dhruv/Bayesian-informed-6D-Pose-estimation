@@ -25,7 +25,7 @@ Transformations are done after cropping. Cropping depends on the pose estimation
 - ~~Next steps are data augmentation tests, and inference replication of the pretrained model.~~
 #### 11
 Inference replicated with the functions from orignal code with horrible depth map. Noticeable improvement with depth completion with better kernels
-- Don't make a loader for training yet. Make sure the pipeline works on the pretrained data and finish the bayesian framework this week. This includes the code modularity (1 day)
+- Don't make a loader for training yet. ~~Make sure the pipeline works on the pretrained data and finish the bayesian framework this week. ~~ This includes the code modularity (1 day)
 - Synthetic Data dataloader.  (1 day)
 #### 18
 At this point, I will be taking a backseat.
@@ -54,5 +54,9 @@ Paper transforms the data after cropping. I am assuming in rgb its fine, but teh
     - Calculate Kalman Gain
     - Update Nominal State
 
-- Tracknet is weird - gives liealgebra with dt multiplied (in a way)
-So we dont get angular velocities, we get relative pose
+
+
+## 14th Nov Updates
+- Still can't figure out a way to make the dataloader cleaner. Note that we can't alter data before cropping. This is because, the cropping works based on 3D pose, we backproject 3D points with pose and crop using that. The current solution would be to load raw images, and let a utils class handle both cropping and augmentation. Our architecture will assume that dataloader's job is to only provide raw images. 
+
+- This architecture simplies the problem but requires utils to work on batches!
