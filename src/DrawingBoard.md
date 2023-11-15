@@ -72,4 +72,10 @@ Paper transforms the data after cropping. I am assuming in rgb its fine, but teh
 - ADD, MSE, LR, Gradient Norm, Weight Norm, 
 
 ## Parameters
-- lr, btch, 
+- lr, btch, loss weights,
+
+We will use early stopping for sure
+
+
+## 15th Nov updates
+- We need data augmentation since we already have domain randomized images. Depth data however is perfect in simulation. We can in theory using Dropout to simulate depth image holes. And?
