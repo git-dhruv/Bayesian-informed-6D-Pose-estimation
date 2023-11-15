@@ -60,3 +60,16 @@ Paper transforms the data after cropping. I am assuming in rgb its fine, but teh
 - Still can't figure out a way to make the dataloader cleaner. Note that we can't alter data before cropping. This is because, the cropping works based on 3D pose, we backproject 3D points with pose and crop using that. The current solution would be to load raw images, and let a utils class handle both cropping and augmentation. Our architecture will assume that dataloader's job is to only provide raw images. 
 
 - This architecture simplies the problem but requires utils to work on batches!
+
+
+- Turns out synthetic data is already cropped which make the training pipeline extremely simple!
+
+
+- Just because I can, doesn't mean I would. Due to interest of time, we will switch to lightning and metrics. Sorry! 
+
+
+## Metrics
+- ADD, MSE, LR, Gradient Norm, Weight Norm, 
+
+## Parameters
+- lr, btch, 
