@@ -24,7 +24,7 @@ from PIL import Image
 
 from utils import lieGroup
 from scipy.spatial.transform import Rotation
-
+import manipulation
 
 def handlePath(root, isSynthetic, classId=5, mode=0)-> Dict[str, Any]:
     """
@@ -105,10 +105,13 @@ class dataloader(Dataset):
         self.labeltransform = labeltransform
         #Get all the files required
         self.files, datalen = handlePath(root, datatype, classId, mode)
-        print(maxLen)
         if maxLen is None:
             maxLen = datalen
         self.maxLen = maxLen
+
+        self.mean = np.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\mean.npy")
+        self.std = np.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\std.npy")
+
         
     def __len__(self):
         return self.maxLen
@@ -127,11 +130,15 @@ class dataloader(Dataset):
     ### Workhorse of the code begin from below ###
     def getSynthData(self, idx):        
         # I hate this Image open as much as you do
-        rgbA = np.array(Image.open(self.files['rgbA'][idx], cv2.IMREAD_UNCHANGED))
+        rgbA = np.array(Image.open(self.files['rgbA'][idx]))
         depthA = np.float64(cv2.imread(self.files['depthA'][idx], cv2.IMREAD_UNCHANGED))
-        rgbB = np.array(Image.open(self.files['rgbA'][idx], cv2.IMREAD_UNCHANGED))
-        depthB = np.float64(cv2.imread(self.files['depthA'][idx], cv2.IMREAD_UNCHANGED))
-        meta = np.load(self.files['npzFiles'])
+        rgbB = np.array(Image.open(self.files['rgbB'][idx]))
+        depthB = np.float64(cv2.imread(self.files['depthB'][idx], cv2.IMREAD_UNCHANGED))
+
+        
+
+
+        meta = np.load(self.files['npzFiles'][idx])
         C_H_A = None #Pose of Object A in Camera frame - A and B is the worst naming convention
         C_H_B = None 
         for file in meta.files:
@@ -141,7 +148,10 @@ class dataloader(Dataset):
                 C_H_B = meta[file]
         if C_H_A is None or C_H_B is None:
             raise Exception (f"Can't find ground truth pose for num: {idx}")
-        
+
+        #Lord forgive me for the sin I am above to do
+        rgbdA, rgbdB = self.cookInputData(rgbA, rgbB, depthA, depthB, C_H_A, C_H_B)
+
         vDT = C_H_B[:3,-1] - C_H_A[:3,-1]
         rlPose = C_H_B[:3,:3]@C_H_A[:3,:3].T ### Derivation: C_H_r @ C_H_A = C_H_B; C_H_r = C_H_B @ (C_H_A).T
          
@@ -149,7 +159,7 @@ class dataloader(Dataset):
         rlPose = lieGroup().constructValidRotationMatrix(rlPose) #Ensure we get a valid rotation matrix 
         rlPose = Rotation.from_matrix(rlPose).as_rotvec()/self.labeltransform['rotation']
 
-        return rgbA, rgbB, depthA, depthB, vDT, rlPose
+        return rgbdA, rgbdB, vDT, rlPose
         
 
     def getRealData(self, idx):
@@ -171,7 +181,30 @@ class dataloader(Dataset):
         rgbd = torch.cat((rgb, d), dim=1)
         # assert rgbd.size() == targetSize , "stackRGBD can't give correct output"
         return rgbd
-    
+    def cookInputData(self, rgbA, rgbB, depthA, depthB, C_H_A, C_H_B):
+        #### This function should handle literally everything that is required ####
+
+        ## Add perturbation homogenous matrix ##
+        rot_noise_scale = 5*np.pi/180; translation_noise_scale = 5e-2
+        rot_perturb_A = Rotation.from_rotvec((np.random.random(size=(3,)) - 0.5)*rot_noise_scale).as_quat()
+        trans_perturb_A = (np.random.random(size=(3,)) - 0.5)*translation_noise_scale
+        noisy_lie_algebra_A = lieGroup().makeHomoTransform(trans_perturb_A, rot_perturb_A)
+        rot_perturb_B = Rotation.from_rotvec((np.random.random(size=(3,)) - 0.5)*rot_noise_scale).as_quat()
+        trans_perturb_B = (np.random.random(size=(3,)) - 0.5)*translation_noise_scale
+        noisy_lie_algebra_B = lieGroup().makeHomoTransform(trans_perturb_B, rot_perturb_B)
+
+
+
+        ## - We need do OffseDepth for both rendering plus real
+        tmp = transforms.Compose([manipulation.OffsetDepthDhruv(), manipulation.NormalizeChannelsRender(self.mean, self.std)])
+        rgbA, depthA,_ = tmp([rgbA, depthA, noisy_lie_algebra_A@C_H_A])
+        tmp = transforms.Compose([manipulation.OffsetDepthDhruv(), manipulation.NormalizeChannelsReal(self.mean, self.std)])
+        rgbB, depthB,_ = tmp([rgbB, depthB, noisy_lie_algebra_B@C_H_B])
+        ## Return the StackRGB
+        rgbd = self.stackRGBD(torch.Tensor(rgbA).unsqueeze(0), torch.Tensor(depthA).unsqueeze(0).unsqueeze(0))
+        rgbd_prev = self.stackRGBD(torch.Tensor(rgbB).unsqueeze(0), torch.Tensor(depthB).unsqueeze(0).unsqueeze(0))
+        return rgbd.squeeze(0), rgbd_prev.squeeze(0)
+
 
 def main()->None:    
     root = r"data\mustard_bottle"

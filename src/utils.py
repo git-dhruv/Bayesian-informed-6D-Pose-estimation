@@ -11,7 +11,7 @@ class lieGroup:
         pass
     
     @staticmethod
-    def constructValidRotationMatrix(self, R):
+    def constructValidRotationMatrix(R):
         """Finds the least square estimate of closed SO(3)"""
         U,_,Vt = np.linalg.svd(R)
         Smod = np.eye(3)
