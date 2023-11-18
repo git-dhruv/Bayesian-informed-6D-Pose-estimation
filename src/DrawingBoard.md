@@ -78,4 +78,9 @@ We will use early stopping for sure
 
 
 ## 15th Nov updates
-- We need data augmentation since we already have domain randomized images. Depth data however is perfect in simulation. We can in theory using Dropout to simulate depth image holes. And?
+- We donot need data augmentation since we already have domain randomized images. Depth data however is perfect in simulation. We can in theory using Dropout to simulate depth image holes. 
+--> I trained a ruin Depth network that simulates noisy depth data from synthetic image. Since this is offline refinement, this is fine to me. The network is also just 5 layers deep and performs segmentation on the real and bad data. 
+
+## 18th Nov Updates
+- Training decisions
+RGB normalizations of mean and std are weird. Training on the raw synthetic data for now and see the network performance. Then we will use ruin depth to train and see that model performance.
