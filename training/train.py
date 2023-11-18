@@ -50,7 +50,7 @@ class train(pl.LightningModule):
         self.logdir = opj(ROOT, 'logs')
 
         ## Dataset setup ##        
-        isSynth = 1; maxLen = None; dataConfig = ""; classId = 5; datatype = 1        
+        isSynth = 1; maxLen = 20000; dataConfig = ""; classId = 5; datatype = 1        
         labeltransform= {'translation': self.transnorm, 'rotation': self.rotnorm}        
         self.loader = ycbloader.dataloader(dataDir,isSynth, datatype, dataConfig, None, labeltransform, classId, maxLen)
 
@@ -68,6 +68,9 @@ class train(pl.LightningModule):
         ## Training Setup ##
         self.train_loader = torch.utils.data.DataLoader(self.loader, shuffle=True, batch_size=self.batchSize)
         self.model = network.Se3TrackNet()
+        # checkpoint = torch.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\model_epoch150.pth.tar")
+        # self.model.load_state_dict(checkpoint['state_dict'])
+        # self.model = self.model.cuda()
 
         self.tLoss = nn.MSELoss()
         self.rLoss = nn.MSELoss()
@@ -83,6 +86,9 @@ class train(pl.LightningModule):
         tloss = self.tLoss(trans, vDT)
         rloss = self.rLoss(rot, rlPose)
         loss =  tloss + rloss #TODO Add weights
+        if self.current_epoch==1:
+            checkpoint_data = {'state_dict': self.model.state_dict()}
+            torch.save(checkpoint_data, "model.pth.tar")
         return loss
         
     
@@ -115,20 +121,20 @@ def main()->None:
         config = yaml.safe_load(ff)
     with open(r"configurations\trainconfig.yaml" ,'r') as ff:
         trainConfig = yaml.safe_load(ff)
-    imagemean = np.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\mean.npy")
-    imagestd = np.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\std.npy")
-    modelweights = r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\model_epoch150.pth.tar"
-    transnormalize = 0.03;rotnormalize =5*np.pi/180 ; 
-    meshfile = r"C:\Users\dhruv\Desktop\680Final\data\CADmodels\006_mustard_bottle\textured.ply"
     #  dataConfig, trainConfig, dataDir
     framework = train(config, trainConfig = trainConfig, dataDir=r"data\mustard_bottle")
     # framework.train()
-    torch.set_float32_matmul_precision('medium')
+    torch.set_float32_matmul_precision('high')
     trainer = pl.Trainer(
         devices=1, 
         accelerator="gpu", 
-        max_epochs=100
+        max_epochs=2
     )
+    checkpoint = torch.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\model_epoch150.pth.tar")
+    
+    framework.model.load_state_dict(checkpoint['state_dict'])#model.load_from_checkpoint('checkpoints\my_model-epoch=99-loss=0.01.ckpt')
+
+
     trainer.fit(framework)
 
 

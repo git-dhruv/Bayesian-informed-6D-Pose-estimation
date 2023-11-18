@@ -227,7 +227,7 @@ class Bayesian6D:
                 st = self.states.fetchState()
                 pose = self.lieUtils.makeHomoTransform(st[:3], st[3:])
 
-            self.visualizePrediction(pose, rgb[0].numpy())
+            # self.visualizePrediction(pose, rgb[0].numpy())
             self.poseErr.append(np.linalg.inv(pose)@gt[0].cpu().numpy())
             # self.visualizePrediction(gt[0].cpu().numpy(), rgb[0].numpy(), 'GT')
 
@@ -271,7 +271,8 @@ def main()->None:
         config = yaml.safe_load(ff)
     imagemean = np.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\mean.npy")
     imagestd = np.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\std.npy")
-    modelweights = r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\model_epoch150.pth.tar"
+    # modelweights = r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\model_epoch150.pth.tar"
+    modelweights = r"C:\Users\dhruv\Desktop\680Final\model.pth.tar"
     transnormalize = 0.03;rotnormalize =5*np.pi/180 ; 
     meshfile = r"C:\Users\dhruv\Desktop\680Final\data\CADmodels\006_mustard_bottle\textured.ply"
     framework = Bayesian6D(config, imagemean, imagestd, modelweights, transnormalize, rotnormalize, meshfile)

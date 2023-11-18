@@ -116,10 +116,10 @@ class Se3TrackNet(nn.Module):
 		self.rot_pool1 = nn.AdaptiveAvgPool2d(1)
 		self.rot_out = nn.Sequential(nn.Linear(512,self.rot_dim),nn.Tanh())
 
-		self.m1 = nn.Dropout(p=0.5)
-		self.m2 = nn.Dropout(p=0.5)
-		self.m3 = nn.Dropout(p=0.5)
-		self.m4 = nn.Dropout(p=0.5)
+		self.m1 = nn.Dropout(p=0.0005)
+		self.m2 = nn.Dropout(p=0.0005)
+		self.m3 = nn.Dropout(p=0.0005)
+		self.m4 = nn.Dropout(p=0.0005)
 
 
 
@@ -145,7 +145,7 @@ class Se3TrackNet(nn.Module):
 		trans = self.trans_conv1(ab)
 		trans = self.trans_conv2(trans)
 		trans = self.trans_pool1(trans)
-		trans = trans.reshape(batch_size,-1)
+		trans = trans.reshape(batch_size,-1).contiguous()
 		trans = self.trans_out(trans).contiguous()
 		output['trans'] = trans
 
@@ -153,7 +153,7 @@ class Se3TrackNet(nn.Module):
 		rot = self.rot_conv1(ab)
 		rot = self.rot_conv2(rot)
 		rot = self.rot_pool1(rot)
-		rot = rot.reshape(batch_size,-1)
+		rot = rot.reshape(batch_size,-1).contiguous()
 		rot = self.rot_out(rot).contiguous()
 		output['rot'] = rot
 
