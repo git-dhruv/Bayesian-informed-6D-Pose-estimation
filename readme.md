@@ -3,9 +3,9 @@
 - ~~Pipeline test on ground truth~~
 - ~~Depth Completion~~
 - Classical 6D ICP with covariance
-- Network architecture
+- ~~Network architecture~~
 - Logging
-- Data (Dataloader, Augmentations and OpenGL rendering)
+- ~~Data (Dataloader, Augmentations and OpenGL rendering)~~
 - Profiling
 - Ablation Studies (Depth Completion Ablations are done)
 
