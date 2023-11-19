@@ -127,28 +127,67 @@ def main()->None:
     img_depth_filled = cv2.imread(r"data\0050\depth_filled\0000000.png", cv2.IMREAD_UNCHANGED)
 
 
-    plt.figure(figsize=(10, 10))  
-    plt.subplot(2, 2, 1)
-    plt.imshow(cv2.cvtColor(img_color, cv2.COLOR_BGR2RGB))  # Convert BGR to RGB for displaying
-    plt.title('Original Color Image')
-    plt.axis('off')  
-    plt.subplot(2, 2, 2)
-    plt.imshow(img_depth, cmap='jet')  
-    plt.title('Original Depth Image')
-    plt.axis('off')
+    # plt.figure(figsize=(10, 10))  
+    # plt.subplot(2, 2, 1)
+    # plt.imshow(cv2.cvtColor(img_color, cv2.COLOR_BGR2RGB))  # Convert BGR to RGB for displaying
+    # plt.title('Original Color Image')
+    # plt.axis('off')  
+    # plt.subplot(2, 2, 2)
+    # plt.imshow(img_depth, cmap='jet')  
+    # plt.title('Original Depth Image')
+    # plt.axis('off')
 
-    plt.subplot(2, 2, 3)
-    plt.imshow(out, cmap='jet')  
-    plt.title('Processed Depth Image')
-    plt.axis('off')
+    # plt.subplot(2, 2, 3)
+    # plt.imshow(out, cmap='jet')  
+    # plt.title('Processed Depth Image')
+    # plt.axis('off')
 
-    plt.subplot(2, 2, 4)
-    plt.imshow(img_depth_filled, cmap='jet')  
-    plt.title('Depth Filled Image')
-    plt.axis('off')
+    # plt.subplot(2, 2, 4)
+    # plt.imshow(img_depth_filled, cmap='jet')  
+    # plt.title('Depth Filled Image')
+    # plt.axis('off')
 
-    plt.tight_layout()
-    plt.show()
+    # plt.tight_layout()
+    # plt.show()
+
+
+
+    def add_gaussian_noise(depth_image, mean=0, sigma=25):
+        """Add Gaussian noise to the depth image."""
+        noise = np.random.normal(mean, sigma, depth_image.shape)
+        noisy_depth = depth_image + noise
+        return np.clip(noisy_depth, 0, 3000)  # Clip values to the valid depth range
+
+    def add_salt_and_pepper_noise(depth_image, salt_prob=0.02, pepper_prob=0.02):
+        """Add salt-and-pepper noise to the depth image."""
+        row, col = depth_image.shape
+        noisy_depth = np.copy(depth_image)
+
+        # Add salt noise
+        salt_pixels = np.random.choice([0, 3000], size=(row, col), replace=True, p=[salt_prob, 1 - salt_prob])
+        noisy_depth[salt_pixels == 0] = 0  # set salt pixels to minimum depth
+
+        # Add pepper noise
+        pepper_pixels = np.random.choice([0, 3000], size=(row, col), replace=True, p=[pepper_prob, 1 - pepper_prob])
+        noisy_depth[pepper_pixels == 0] = 3000  # set pepper pixels to maximum depth
+
+        return noisy_depth
+
+    # Load your depth image using cv2.imread
+    depth_image = out
+
+    # Add Gaussian noise
+    depth_image_with_gaussian = add_gaussian_noise(depth_image)
+
+    # Add salt-and-pepper noise
+    depth_image_with_sp = add_salt_and_pepper_noise(depth_image_with_gaussian)
+
+    # Display or save the corrupted images
+    mask = depth_image_with_sp==0
+    out[mask] = 0
+    plt.imshow(out); plt.show()
+
+
 
 
 

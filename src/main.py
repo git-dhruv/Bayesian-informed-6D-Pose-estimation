@@ -102,6 +102,8 @@ class Bayesian6D:
         self.firstPassCompl = 0
         
 
+        self.predlogs = []
+
     def renderObject(self, CV_H_Ob):
         '''
         This function simulates the situation in openGL
@@ -132,7 +134,7 @@ class Bayesian6D:
         rgb, depth = self.inputModification.cropImage(rgb, depth, pose, scale = (1000,1000,1000))
         
 
-        depth = self.depthfix.fillDepth(depth) #Makes surreal difference (inactive till robust pipeline made)
+        # depth = self.depthfix.fillDepth(depth) #Makes surreal difference (inactive till robust pipeline made)
         # self.visualize_depth_image(depth)
 
         tmp = transforms.Compose([OffsetDepthDhruv(), NormalizeChannelsReal(self.mean, self.std)])
@@ -156,6 +158,8 @@ class Bayesian6D:
         #Inference single pass doesn't have batches
         vel = twist['trans'][0].data.cpu().numpy()
         omega = twist['rot'][0].data.cpu().numpy()
+
+        self.predlogs.append(np.linalg.norm(vel)/np.linalg.norm(omega))
 
         return self.processPredict(pose, (vel,omega))
     
@@ -231,6 +235,9 @@ class Bayesian6D:
             self.poseErr.append(np.linalg.inv(pose)@gt[0].cpu().numpy())
             # self.visualizePrediction(gt[0].cpu().numpy(), rgb[0].numpy(), 'GT')
 
+        plt.figure()
+        plt.plot(self.predlogs)
+        plt.show()
         
         trns = np.array([i[:3,-1] for i in self.poseErr])
         rots = np.array([Rotation.from_matrix(i[:3,:3]).as_rotvec()*180/np.pi for i in self.poseErr])
@@ -271,7 +278,7 @@ def main()->None:
         config = yaml.safe_load(ff)
     imagemean = np.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\mean.npy")
     imagestd = np.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\std.npy")
-    # modelweights = r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\model_epoch150.pth.tar"
+    modelweights = r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\model_epoch150.pth.tar"
     modelweights = r"C:\Users\dhruv\Desktop\680Final\model.pth.tar"
     transnormalize = 0.03;rotnormalize =5*np.pi/180 ; 
     meshfile = r"C:\Users\dhruv\Desktop\680Final\data\CADmodels\006_mustard_bottle\textured.ply"

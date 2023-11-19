@@ -185,7 +185,7 @@ class dataloader(Dataset):
         #### This function should handle literally everything that is required ####
 
         ## Add perturbation homogenous matrix ##
-        rot_noise_scale = 0*5*np.pi/180; translation_noise_scale = 0*5e-2
+        rot_noise_scale = 5*np.pi/180; translation_noise_scale = 5e-2
         rot_perturb_A = Rotation.from_rotvec((np.random.random(size=(3,)) - 0.5)*rot_noise_scale).as_quat()
         trans_perturb_A = (np.random.random(size=(3,)) - 0.5)*translation_noise_scale
         noisy_lie_algebra_A = lieGroup().makeHomoTransform(trans_perturb_A, rot_perturb_A)

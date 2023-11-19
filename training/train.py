@@ -3,6 +3,9 @@
 
 """
 train.py: Training algorithm
+@author: Dhruv Parikh
+@brief: Training pipeline for the SE3Tracknet with modifications. 
+@TODO: A lot but dont have the will for now
 """
 ## System Configuration ##
 import sys
@@ -53,11 +56,13 @@ class train(pl.LightningModule):
         isSynth = 1; maxLen = 20000; dataConfig = ""; classId = 5; datatype = 1        
         labeltransform= {'translation': self.transnorm, 'rotation': self.rotnorm}        
         self.loader = ycbloader.dataloader(dataDir,isSynth, datatype, dataConfig, None, labeltransform, classId, maxLen)
+        isSynth = 1; maxLen = 100; dataConfig = ""; classId = 5; datatype = 0        
+        self.val_loader = ycbloader.dataloader(dataDir,isSynth, datatype, dataConfig, None, labeltransform, classId, maxLen)
 
 
         ## Training Config ##
         epochs = trainConfig['ep']
-        lr = trainConfig['lr']
+        self.lr = trainConfig['lr']
         self.batchSize = trainConfig['batch']
         self.chkpt = None
         if len(trainConfig['pretrained'])>0:
@@ -66,11 +71,10 @@ class train(pl.LightningModule):
 
 
         ## Training Setup ##
-        self.train_loader = torch.utils.data.DataLoader(self.loader, shuffle=True, batch_size=self.batchSize)
+        self.train_dataset = torch.utils.data.DataLoader(self.loader, shuffle=True, batch_size=self.batchSize)
+        self.val_dataset = torch.utils.data.DataLoader(self.val_loader, shuffle=True, batch_size=self.batchSize)
+        
         self.model = network.Se3TrackNet()
-        # checkpoint = torch.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\model_epoch150.pth.tar")
-        # self.model.load_state_dict(checkpoint['state_dict'])
-        # self.model = self.model.cuda()
 
         self.tLoss = nn.MSELoss()
         self.rLoss = nn.MSELoss()
@@ -85,18 +89,22 @@ class train(pl.LightningModule):
         trans, rot = self.forward(rgbdA.cuda().float(), rgbdB.cuda().float())        
         tloss = self.tLoss(trans, vDT)
         rloss = self.rLoss(rot, rlPose)
-        loss =  tloss + rloss #TODO Add weights
-        if self.current_epoch==1:
-            checkpoint_data = {'state_dict': self.model.state_dict()}
-            torch.save(checkpoint_data, "model.pth.tar")
+        loss =  tloss + 3*rloss #TODO Add weights from config
         return loss
         
     
-    # def validation_step(self, batch, batch_idx):
-    #     images, targets = batch
+    def validation_step(self, batch, batch_idx):
+        # This needs to be changed but I am too bored to give a shit
+        rgbdA, rgbdB, vDT, rlPose = batch
+        trans, rot = self.forward(rgbdA.cuda().float(), rgbdB.cuda().float())        
+        tloss = self.tLoss(trans, vDT)
+        rloss = self.rLoss(rot, rlPose)
+        loss =  tloss + 3*rloss #TODO Add weights from config
+        return loss
+        
 
-    def on_train_epoch_end(self):
-        pass
+    # def on_train_epoch_end(self):
+    #     pass
 
     # def on_validation_epoch_end(self):
     #     pass
@@ -105,11 +113,10 @@ class train(pl.LightningModule):
     def train_dataloader(self):
         return self.train_loader
     
-    # def val_dataloader(self):
-    #     testloader = torch.utils.data.DataLoader(self.test_loader, shuffle=False, batch_size=64)
-    #     return testloader
+    def val_dataloader(self):
+        return self.val_dataloader
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-5)
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
         return optimizer
 
 
@@ -124,17 +131,14 @@ def main()->None:
     #  dataConfig, trainConfig, dataDir
     framework = train(config, trainConfig = trainConfig, dataDir=r"data\mustard_bottle")
     # framework.train()
-    torch.set_float32_matmul_precision('high')
+    torch.set_float32_matmul_precision('medium')
     trainer = pl.Trainer(
         devices=1, 
         accelerator="gpu", 
-        max_epochs=2
+        max_epochs=6
     )
-    checkpoint = torch.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\model_epoch150.pth.tar")
-    
-    framework.model.load_state_dict(checkpoint['state_dict'])#model.load_from_checkpoint('checkpoints\my_model-epoch=99-loss=0.01.ckpt')
-
-
+    checkpoint = torch.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\model_epoch150.pth.tar")    
+    framework.model.load_state_dict(checkpoint['state_dict'])
     trainer.fit(framework)
 
 
@@ -142,14 +146,3 @@ def main()->None:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     main()
-
-
-
-"""
--------- Tracker --------
-- Validation Loss left
-- Using premade network
-- Augmentation left
-- Metrics left
-- Lot of thoughts left
-"""
