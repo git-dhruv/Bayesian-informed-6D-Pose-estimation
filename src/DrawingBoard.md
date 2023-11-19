@@ -25,7 +25,7 @@ Transformations are done after cropping. Cropping depends on the pose estimation
 - ~~Next steps are data augmentation tests, and inference replication of the pretrained model.~~
 #### 11
 Inference replicated with the functions from orignal code with horrible depth map. Noticeable improvement with depth completion with better kernels
-- Don't make a loader for training yet. Make sure the pipeline works on the pretrained data and finish the bayesian framework this week. This includes the code modularity (1 day)
+- Don't make a loader for training yet. ~~Make sure the pipeline works on the pretrained data and finish the bayesian framework this week. ~~ This includes the code modularity (1 day)
 - Synthetic Data dataloader.  (1 day)
 #### 18
 At this point, I will be taking a backseat.
@@ -54,5 +54,39 @@ Paper transforms the data after cropping. I am assuming in rgb its fine, but teh
     - Calculate Kalman Gain
     - Update Nominal State
 
-- Tracknet is weird - gives liealgebra with dt multiplied (in a way)
-So we dont get angular velocities, we get relative pose
+
+
+## 14th Nov Updates
+- Still can't figure out a way to make the dataloader cleaner. Note that we can't alter data before cropping. This is because, the cropping works based on 3D pose, we backproject 3D points with pose and crop using that. The current solution would be to load raw images, and let a utils class handle both cropping and augmentation. Our architecture will assume that dataloader's job is to only provide raw images. 
+
+- This architecture simplies the problem but requires utils to work on batches!
+
+
+- Turns out synthetic data is already cropped which make the training pipeline extremely simple!
+
+
+- Just because I can, doesn't mean I would. Due to interest of time, we will switch to lightning and metrics. Sorry! 
+
+
+## Metrics
+- ADD, MSE, LR, Gradient Norm, Weight Norm, 
+
+## Parameters
+- lr, btch, loss weights,
+
+We will use early stopping for sure
+
+
+## 15th Nov updates
+- We donot need data augmentation since we already have domain randomized images. Depth data however is perfect in simulation. We can in theory using Dropout to simulate depth image holes. 
+--> I trained a ruin Depth network that simulates noisy depth data from synthetic image. Since this is offline refinement, this is fine to me. The network is also just 5 layers deep and performs segmentation on the real and bad data. 
+
+## 18th Nov Updates
+- Training decisions
+RGB normalizations of mean and std are weird. Training on the raw synthetic data for now and see the network performance. Then we will use ruin depth to train and see that model performance.
+
+- Training pipeline works. As of today, I will complete the metrics part. 
+-- Loss, 
+
+## 19th Nov Update:
+New depth network. I just realized I was not using max pooling operations. So we were just using CNNs without downsampling which makes less sense. Anyways, we get the same performance. Training pipeline is complete. I am now bored with the project since I got better results. 

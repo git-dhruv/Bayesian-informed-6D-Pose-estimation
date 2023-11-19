@@ -22,6 +22,10 @@ from typing import Dict, Any
 import cv2
 from PIL import Image
 
+from utils import lieGroup
+from scipy.spatial.transform import Rotation
+import manipulation
+
 def handlePath(root, isSynthetic, classId=5, mode=0)-> Dict[str, Any]:
     """
     Handles the Path of different datatypes. Synthetic Data has different folder structure while video has different.
@@ -84,8 +88,8 @@ class dataloader(Dataset):
             Location of the config file.
         datatransform : transforms.Compose
             The transformations to apply to the data.
-        labeltransform : transforms.Compose
-            The transformations to apply to the labels.
+        labeltransform : Dictionary {'translation', 'rotation'}
+            The transformations to apply to the labels. These are normalizers
         classId: int
             Id of class as stated in documentation
         maxLen : int
@@ -101,27 +105,40 @@ class dataloader(Dataset):
         self.labeltransform = labeltransform
         #Get all the files required
         self.files, datalen = handlePath(root, datatype, classId, mode)
-        print(maxLen)
         if maxLen is None:
             maxLen = datalen
         self.maxLen = maxLen
+
+        self.mean = np.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\mean.npy")
+        self.std = np.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\std.npy")
+
         
     def __len__(self):
         return self.maxLen
 
     def __getitem__(self, idx):
-        ### Config, datatransform, labeltransform, files, ply file 
+        """
+        * This architecture assumes that dataloader's job is to only provide raw images. 
+        * Note that we can't alter data before cropping. This is because, the cropping works based on 3D pose and we alter 3D cluster in augmentation. 
+        * The current solution would be to load raw images, and let a utils class handle both cropping and augmentation.
+        * We still however do label transform since I don't want to route 2 poses to the utils everytime.          
+        """ 
         if self.isSynthetic:
             return self.getSynthData(idx)
         return self.getRealData(idx)
 
     ### Workhorse of the code begin from below ###
     def getSynthData(self, idx):        
-        rgbA = cv2.imread(self.files['rgbA'][idx], cv2.IMREAD_UNCHANGED)
-        depthA = np.int64(cv2.imread(self.files['depthA'][idx], cv2.IMREAD_UNCHANGED))
-        rgbB = cv2.imread(self.files['rgbA'][idx], cv2.IMREAD_UNCHANGED)
-        depthB = np.int64(cv2.imread(self.files['depthA'][idx], cv2.IMREAD_UNCHANGED))
-        meta = np.load(self.files['npzFiles'])
+        # I hate this Image open as much as you do
+        rgbA = np.array(Image.open(self.files['rgbA'][idx]))
+        depthA = np.float64(cv2.imread(self.files['depthA'][idx], cv2.IMREAD_UNCHANGED))
+        rgbB = np.array(Image.open(self.files['rgbB'][idx]))
+        depthB = np.float64(cv2.imread(self.files['depthB'][idx], cv2.IMREAD_UNCHANGED))
+
+        
+
+
+        meta = np.load(self.files['npzFiles'][idx])
         C_H_A = None #Pose of Object A in Camera frame - A and B is the worst naming convention
         C_H_B = None 
         for file in meta.files:
@@ -131,14 +148,18 @@ class dataloader(Dataset):
                 C_H_B = meta[file]
         if C_H_A is None or C_H_B is None:
             raise Exception (f"Can't find ground truth pose for num: {idx}")
-        
-        rgbA = self.datatransform(rgbA); rgbB = self.datatransform(rgbB)
-        depthA = self.datatransform(depthA);depthB = self.datatransform(depthB)
-        Velocity = C_H_B[:3,-1] - C_H_A[:3,-1]
-        LieAlgebra = C_H_B[:3,:3]@C_H_A[:3,:3].T
-        C_H_A = self.labeltransform(C_H_A);C_H_B = self.labeltransform(C_H_B) 
 
-        return rgbA, rgbB, depthA, depthB, C_H_A, C_H_B
+        #Lord forgive me for the sin I am above to do
+        rgbdA, rgbdB = self.cookInputData(rgbA, rgbB, depthA, depthB, C_H_A, C_H_B)
+
+        vDT = C_H_B[:3,-1] - C_H_A[:3,-1]
+        rlPose = C_H_B[:3,:3]@C_H_A[:3,:3].T ### Derivation: C_H_r @ C_H_A = C_H_B; C_H_r = C_H_B @ (C_H_A).T
+         
+        vDT = vDT/self.labeltransform['translation']
+        rlPose = lieGroup().constructValidRotationMatrix(rlPose) #Ensure we get a valid rotation matrix 
+        rlPose = Rotation.from_matrix(rlPose).as_rotvec()/self.labeltransform['rotation']
+
+        return rgbdA, rgbdB, vDT, rlPose
         
 
     def getRealData(self, idx):
@@ -148,7 +169,6 @@ class dataloader(Dataset):
         and thus is avoided in this method to be invoked by a shared call of get_item 
         """
         
-        # rgb = cv2.imread(self.files['rgb'][idx], cv2.IMREAD_UNCHANGED)
         rgb = np.array(Image.open(self.files['rgb'][idx]))
         depth = (cv2.imread(self.files['depth'][idx], cv2.IMREAD_UNCHANGED)).astype(np.float64)
         gt = np.loadtxt(self.files['pose_gt'][idx])
@@ -161,15 +181,38 @@ class dataloader(Dataset):
         rgbd = torch.cat((rgb, d), dim=1)
         # assert rgbd.size() == targetSize , "stackRGBD can't give correct output"
         return rgbd
-    
+    def cookInputData(self, rgbA, rgbB, depthA, depthB, C_H_A, C_H_B):
+        #### This function should handle literally everything that is required ####
+
+        ## Add perturbation homogenous matrix ##
+        rot_noise_scale = 5*np.pi/180; translation_noise_scale = 5e-2
+        rot_perturb_A = Rotation.from_rotvec((np.random.random(size=(3,)) - 0.5)*rot_noise_scale).as_quat()
+        trans_perturb_A = (np.random.random(size=(3,)) - 0.5)*translation_noise_scale
+        noisy_lie_algebra_A = lieGroup().makeHomoTransform(trans_perturb_A, rot_perturb_A)
+        rot_perturb_B = Rotation.from_rotvec((np.random.random(size=(3,)) - 0.5)*rot_noise_scale).as_quat()
+        trans_perturb_B = (np.random.random(size=(3,)) - 0.5)*translation_noise_scale
+        noisy_lie_algebra_B = lieGroup().makeHomoTransform(trans_perturb_B, rot_perturb_B)
+
+
+
+        ## - We need do OffseDepth for both rendering plus real
+        tmp = transforms.Compose([manipulation.OffsetDepthDhruv(), manipulation.NormalizeChannelsRender(self.mean, self.std)])
+        rgbA, depthA,_ = tmp([rgbA, depthA, noisy_lie_algebra_A@C_H_A])
+        tmp = transforms.Compose([manipulation.OffsetDepthDhruv(), manipulation.NormalizeChannelsReal(self.mean, self.std)])
+        rgbB, depthB,_ = tmp([rgbB, depthB, noisy_lie_algebra_B@C_H_B])
+        ## Return the StackRGB
+        rgbd = self.stackRGBD(torch.Tensor(rgbA).unsqueeze(0), torch.Tensor(depthA).unsqueeze(0).unsqueeze(0))
+        rgbd_prev = self.stackRGBD(torch.Tensor(rgbB).unsqueeze(0), torch.Tensor(depthB).unsqueeze(0).unsqueeze(0))
+        return rgbd.squeeze(0), rgbd_prev.squeeze(0)
+
 
 def main()->None:    
-    root = r"data\0050"
-    datatype = 0
+    root = r"data\mustard_bottle"
+    datatype = 1
     classId = 5
     mode = 0
     config = ""
-    datatransform = transforms.ToTensor()
+    datatransform = None
     labeltransform = None
     maxLen = None
     loader = dataloader(root, mode, datatype, config, datatransform, labeltransform, classId, maxLen)

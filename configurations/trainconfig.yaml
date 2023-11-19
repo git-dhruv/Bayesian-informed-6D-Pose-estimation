@@ -1,0 +1,5 @@
+ep: 1
+lr: 0.001
+batch: 100
+device: 'cpu'
+pretrained: ''
