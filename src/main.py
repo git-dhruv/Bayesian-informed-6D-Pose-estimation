@@ -86,7 +86,7 @@ class Bayesian6D:
         mode = 0
         config = "" #Where do we use this config file
         labeltransform = None
-        maxLen = 1000
+        maxLen = 10
         self.loadData = dataloader(root, mode, datatype, config, imagetransforms, labeltransform, classId, maxLen)
 
         self.transnormalize = transnormalize
@@ -169,11 +169,13 @@ class Bayesian6D:
         model.transform(pose)
 
         uvs = self.imgOps.bckPrjctFromK(self.K, np.asarray(model.points))
-        cur_bgr = cv2.cvtColor(rgb,cv2.COLOR_RGB2BGR)
-        for ii in range(len(uvs)):
-            cv2.circle(cur_bgr,(uvs[ii,0],uvs[ii,1]),radius=1,color=(0,0,255),thickness=-1)
-        cv2.imshow(wndname,cur_bgr)        
-        cv2.waitKey(1)
+        if wndname is not None:
+            cur_bgr = cv2.cvtColor(rgb,cv2.COLOR_RGB2BGR)
+            for ii in range(len(uvs)):
+                cv2.circle(cur_bgr,(uvs[ii,0],uvs[ii,1]),radius=1,color=(0,0,255),thickness=-1)
+            cv2.imshow(wndname,cur_bgr)        
+            cv2.waitKey(1)
+        return uvs
             
     def visualize_depth_image(self,depth_image):
         """
@@ -217,6 +219,7 @@ class Bayesian6D:
 
     def runPipeline(self):
         self.poseErr = []
+        self.reprjErr = []
 
         train_loader = torch.utils.data.DataLoader(self.loadData, shuffle=False, batch_size=1)
         for idx, data in enumerate(train_loader):
@@ -231,12 +234,20 @@ class Bayesian6D:
                 st = self.states.fetchState()
                 pose = self.lieUtils.makeHomoTransform(st[:3], st[3:])
 
-            # self.visualizePrediction(pose, rgb[0].numpy())
+            predicted_px = self.visualizePrediction(pose, rgb[0].numpy())
             self.poseErr.append(np.linalg.inv(pose)@gt[0].cpu().numpy())
-            # self.visualizePrediction(gt[0].cpu().numpy(), rgb[0].numpy(), 'GT')
+            gt_px = self.visualizePrediction(gt[0].cpu().numpy(), rgb[0].numpy(), None)
+
+            self.reprjErr.append( np.abs(predicted_px - gt_px).mean(axis=0) )
 
         plt.figure()
         plt.plot(self.predlogs)
+        plt.show()
+
+        self.reprjErr = np.array(self.reprjErr)
+        fig, axs = plt.subplots(2, 1, figsize=(15, 10))
+        axs[0].plot(self.reprjErr[:,0], '.')
+        axs[1].plot(self.reprjErr[:,1], '.')
         plt.show()
         
         trns = np.array([i[:3,-1] for i in self.poseErr])
