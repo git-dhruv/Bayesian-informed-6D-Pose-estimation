@@ -90,3 +90,8 @@ RGB normalizations of mean and std are weird. Training on the raw synthetic data
 
 ## 19th Nov Update:
 New depth network. I just realized I was not using max pooling operations. So we were just using CNNs without downsampling which makes less sense. Anyways, we get the same performance. Training pipeline is complete. I am now bored with the project since I got better results. 
+
+
+
+## 28th Nov Update
+I tried using reprojection error as one of the losses, but it didn't work. I don't know why though. 

@@ -68,7 +68,8 @@ class Bayesian6D:
         self.model = se3_tracknet.Se3TrackNet(self.network_in_size[0])
         
         checkpoint = torch.load(modelweights)
-        self.model.load_state_dict(checkpoint['state_dict'])
+        # self.model.load_state_dict(checkpoint['state_dict'])
+        self.model.load_state_dict(checkpoint)
         self.model = self.model.cuda()
         self.model.eval()
 
@@ -86,7 +87,7 @@ class Bayesian6D:
         mode = 0
         config = "" #Where do we use this config file
         labeltransform = None
-        maxLen = 10
+        maxLen = 1000
         self.loadData = dataloader(root, mode, datatype, config, imagetransforms, labeltransform, classId, maxLen)
 
         self.transnormalize = transnormalize
@@ -165,10 +166,15 @@ class Bayesian6D:
     
     def visualizePrediction(self, pose, rgb, wndname='Prediction' ):
         #Transform PCL using Pose
-        model = deepcopy(self.pointcloud)
-        model.transform(pose)
+        # model = deepcopy(self.pointcloud)
+        # model.transform(pose)
 
-        uvs = self.imgOps.bckPrjctFromK(self.K, np.asarray(model.points))
+        pts = deepcopy(np.asarray(self.pointcloud.points))
+        pts = np.column_stack((pts, np.ones((pts.shape[0],1))))
+        pts = pose.dot(pts.T)
+
+
+        uvs = self.imgOps.bckPrjctFromK(self.K, pts[:3,:].T)
         if wndname is not None:
             cur_bgr = cv2.cvtColor(rgb,cv2.COLOR_RGB2BGR)
             for ii in range(len(uvs)):
@@ -290,7 +296,7 @@ def main()->None:
     imagemean = np.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\mean.npy")
     imagestd = np.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\std.npy")
     modelweights = r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\model_epoch150.pth.tar"
-    modelweights = r"C:\Users\dhruv\Desktop\680Final\model.pth.tar"
+    modelweights = r"C:\Users\dhruv\Desktop\680Final\se3tracknet.pth"
     transnormalize = 0.03;rotnormalize =5*np.pi/180 ; 
     meshfile = r"C:\Users\dhruv\Desktop\680Final\data\CADmodels\006_mustard_bottle\textured.ply"
     framework = Bayesian6D(config, imagemean, imagestd, modelweights, transnormalize, rotnormalize, meshfile)

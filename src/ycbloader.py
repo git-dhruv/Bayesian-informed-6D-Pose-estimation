@@ -50,7 +50,7 @@ def handlePath(root, isSynthetic, classId=5, mode=0)-> Dict[str, Any]:
         data['rgbA'] = sorted(glob.glob(opj(root, '*rgbA.png')))
         data['rgbB'] = sorted(glob.glob(opj(root, '*rgbB.png')))
         data['depthA'] = sorted(glob.glob(opj(root, '*depthA.png')))
-        data['depthB'] = sorted(glob.glob(opj(root, '*depthB.png')))
+        data['depthB'] = sorted(glob.glob(opj(root, '*depthB_fake.png')))
         data['npzFiles'] = sorted(glob.glob(opj(root, '*meta.npz')))
         datalen = len(data['rgbA'])
     else:
@@ -159,7 +159,7 @@ class dataloader(Dataset):
         rlPose = lieGroup().constructValidRotationMatrix(rlPose) #Ensure we get a valid rotation matrix 
         rlPose = Rotation.from_matrix(rlPose).as_rotvec()/self.labeltransform['rotation']
 
-        return rgbdA, rgbdB, vDT, rlPose
+        return rgbdA, rgbdB, vDT, rlPose, C_H_A, C_H_B
         
 
     def getRealData(self, idx):
