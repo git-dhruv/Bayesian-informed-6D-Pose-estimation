@@ -95,3 +95,12 @@ New depth network. I just realized I was not using max pooling operations. So we
 
 ## 28th Nov Update
 I tried using reprojection error as one of the losses, but it didn't work. I don't know why though. 
+
+## 3rd Dec
+Made the Point Cloud Differentiable and tried the reprojection loss. It still doesnt work. I need to work on a smaller problem to verify the integrity of the loss function. Unfortunately, the inference methods require me to train on the large data, else there is the overfit problem. 
+
+Abandoning this idea, and trying to make the network gradient better by regularizing on the weights and Diff of SE3. To be very honest, this is the maximum performance we can possibly extract from this model. Current recorded boost is 71% but I wanted a better squeeze. 
+
+
+## Wrapping up
+Project close to completion. Add an awesome readme and wrap up. 

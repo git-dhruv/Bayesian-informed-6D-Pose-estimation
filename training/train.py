@@ -57,7 +57,7 @@ class train(pl.LightningModule):
         self.logdir = opj(ROOT, 'logs')
 
         ## Dataset setup ##        
-        isSynth = 1; maxLen = 25000; dataConfig = ""; classId = 5; datatype = 1        
+        isSynth = 1; maxLen = 15000; dataConfig = ""; classId = 5; datatype = 1        
         labeltransform= {'translation': self.transnorm, 'rotation': self.rotnorm}        
         self.loader = ycbloader.dataloader(dataDir,isSynth, datatype, dataConfig, None, labeltransform, classId, maxLen)
         isSynth = 1; maxLen = 100; dataConfig = ""; classId = 5; datatype = 0        
@@ -105,6 +105,8 @@ class train(pl.LightningModule):
         self.losses = []
         self.itr = 0
         self.loss=0
+        self.weights = 0
+        self.weight_log = []
 
         self.diffSO3 = SO3()
 
@@ -138,19 +140,34 @@ class train(pl.LightningModule):
         rgbdA, rgbdB, vDT, rlPose,C_H_A, C_H_B = batch
         trans, rot = self.forward(rgbdA.cuda().float(), rgbdB.cuda().float())        
 
-        if self.geometricLoss:
+        if self.geometricLoss==1:
             predPose = self.processLieAlg_batch(trans, rot, C_H_A)
             predicted_px = self.getPixels_batch(predPose)[:,:,:3]
             gt_px = self.getPixels_batch(C_H_B, gt=1)[:,:,:3]
             loss = self.tLoss((predicted_px/predicted_px[:,:,-1:])[:,:,:2] , (gt_px/gt_px[:,:,-1:])[:,:,:2]  )*1e3
             self.loss+=(loss); self.itr+=1
             return loss 
+        else:
+            regularization_term = torch.norm(torch.diff(rot, dim=0), dim=-1).mean()
+            tloss = self.tLoss(trans, vDT)
+            rloss = self.rLoss(rot, rlPose)
+            loss =  tloss + 12*rloss + regularization_term  #TODO Add weights from config
+            self.loss+=(loss); self.itr+=1
+            
 
-        tloss = self.tLoss(trans, vDT)
-        rloss = self.rLoss(rot, rlPose)
-        loss =  tloss + 12*rloss #TODO Add weights from config
-        self.loss+=(loss); self.itr+=1
-        return loss
+            ### Weight Norm Calculation for a shitty Graph ###
+            weight_norms = []
+            for param in self.model.parameters():
+                # Ignoring Bias
+                if param.ndimension() > 1:  
+                    norm_value = torch.norm(param.data, p=2)  
+                    weight_norms.append(norm_value.item())
+
+            # Convert the list to a tensor if needed
+            weight_norms = torch.tensor(weight_norms)
+            self.weights += weight_norms
+
+            return loss
     
     # def validation_step(self, batch, batch_idx):
     #     # This needs to be changed but I am too bored to give a shit
@@ -164,10 +181,13 @@ class train(pl.LightningModule):
 
     def on_train_epoch_end(self):
         self.losses.append(self.loss.cpu().detach().numpy()/self.itr)
+        self.weight_log.append(self.weights.cpu().detach().numpy()/self.itr)
         self.loss = 0
+        self.weights = 0
         self.itr = 0
-        print(self.losses[-1])
+        print(self.losses[-1], self.weight_log[-1].mean())
         np.save("loss.pth",self.losses)
+        np.save("grad.pth",self.weight_log)
         torch.save(self.model.state_dict(), 'se3tracknet.pth')
 
 
