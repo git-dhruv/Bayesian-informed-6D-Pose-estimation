@@ -1,5 +1,5 @@
 ep: 1
-lr: 0.002
+lr: 0.005
 batch: 120
 device: 'cpu'
 pretrained: ''

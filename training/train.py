@@ -57,7 +57,7 @@ class train(pl.LightningModule):
         self.logdir = opj(ROOT, 'logs')
 
         ## Dataset setup ##        
-        isSynth = 1; maxLen = 25000; dataConfig = ""; classId = 5; datatype = 1        
+        isSynth = 1; maxLen = 20000; dataConfig = ""; classId = 5; datatype = 1        
         labeltransform= {'translation': self.transnorm, 'rotation': self.rotnorm}        
         self.loader = ycbloader.dataloader(dataDir,isSynth, datatype, dataConfig, None, labeltransform, classId, maxLen)
         isSynth = 1; maxLen = 100; dataConfig = ""; classId = 5; datatype = 0        
@@ -151,7 +151,7 @@ class train(pl.LightningModule):
             angularVel_reg = torch.norm(rot, dim=-1).mean()
             tloss = self.tLoss(trans, vDT)
             rloss = self.rLoss(rot, rlPose)
-            loss =  tloss + 12*rloss + angularVel_reg  #TODO Add weights from config
+            loss =  tloss + 12*rloss + 0.01*angularVel_reg  #TODO Add weights from config
             self.loss+=(loss); self.itr+=1
             
 
@@ -202,7 +202,7 @@ class train(pl.LightningModule):
     # def val_dataloader(self):
     #     return self.val_dataloader
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=1e-2)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=5e-2)
         return optimizer
 
 

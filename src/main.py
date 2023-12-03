@@ -244,7 +244,7 @@ class Bayesian6D:
             pose = self.singlePass(pose, rgb.clone(), depth.clone())
             
 
-            if idx%100==0:
+            if idx%500==0:
                 self.states.measurement(gt[0].cpu().numpy())
                 st = self.states.fetchState()
                 pose = self.lieUtils.makeHomoTransform(st[:3], st[3:])
