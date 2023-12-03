@@ -101,6 +101,8 @@ Made the Point Cloud Differentiable and tried the reprojection loss. It still do
 
 Abandoning this idea, and trying to make the network gradient better by regularizing on the weights and Diff of SE3. To be very honest, this is the maximum performance we can possibly extract from this model. Current recorded boost is 71% but I wanted a better squeeze. 
 
+Feels like Regularizing on Rotation is too harsh for the network. Scaling it down
+
 
 ## Wrapping up
 Project close to completion. Add an awesome readme and wrap up. 

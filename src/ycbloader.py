@@ -55,7 +55,7 @@ def handlePath(root, isSynthetic, classId=5, mode=0)-> Dict[str, Any]:
         datalen = len(data['rgbA'])
     else:
         data['rgb'] = sorted(glob.glob(opj(root, 'color/*.png')))
-        data['depth'] = sorted(glob.glob(opj(root, 'depth/*.png')))
+        data['depth'] = sorted(glob.glob(opj(root, 'depth_filled/*.png')))
         data['pose_gt'] = sorted(glob.glob(opj(root, f'pose_gt/{classId}/*.txt')))
         data['K'] = [opj(root, "cam_K.txt")]
         datalen = len(data['rgb'])

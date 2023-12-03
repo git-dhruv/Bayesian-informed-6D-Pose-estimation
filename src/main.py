@@ -36,6 +36,7 @@ import trimesh
 from manipulation import *
 import utils
 from kf_utils import HandleStates
+from celluloid import Camera
 
 
 class Bayesian6D:
@@ -104,6 +105,11 @@ class Bayesian6D:
         
 
         self.predlogs = []
+        fig = plt.figure()
+        self.axs = fig.gca()
+        self.camera = Camera(fig)
+
+
 
     def renderObject(self, CV_H_Ob):
         '''
@@ -179,7 +185,10 @@ class Bayesian6D:
             cur_bgr = cv2.cvtColor(rgb,cv2.COLOR_RGB2BGR)
             for ii in range(len(uvs)):
                 cv2.circle(cur_bgr,(uvs[ii,0],uvs[ii,1]),radius=1,color=(0,0,255),thickness=-1)
-            cv2.imshow(wndname,cur_bgr)        
+            cv2.imshow(wndname,cur_bgr)
+            cur_rgb = cv2.cvtColor(cur_bgr,cv2.COLOR_BGR2RGB)
+            self.axs.imshow(cur_rgb) #        ; plt.show()
+            self.camera.snap()
             cv2.waitKey(1)
         return uvs
             
@@ -235,7 +244,7 @@ class Bayesian6D:
             pose = self.singlePass(pose, rgb.clone(), depth.clone())
             
 
-            if idx%10==0:
+            if idx%100==0:
                 self.states.measurement(gt[0].cpu().numpy())
                 st = self.states.fetchState()
                 pose = self.lieUtils.makeHomoTransform(st[:3], st[3:])
@@ -245,7 +254,10 @@ class Bayesian6D:
             gt_px = self.visualizePrediction(gt[0].cpu().numpy(), rgb[0].numpy(), None)
 
             self.reprjErr.append( np.abs(predicted_px - gt_px).mean(axis=0) )
+        animation = self.camera.animate()
+        animation.save('out.mp4', fps=30)
 
+        raise NotImplementedError
         plt.figure()
         plt.plot(self.predlogs)
         plt.show()
@@ -296,7 +308,7 @@ def main()->None:
     imagemean = np.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\mean.npy")
     imagestd = np.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\std.npy")
     modelweights = r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\model_epoch150.pth.tar"
-    modelweights = r"C:\Users\dhruv\Desktop\680Final\se3tracknet.pth"
+    modelweights = r"C:\Users\dhruv\Desktop\680Final\se3tracknet_regularization_1deg.pth"
     transnormalize = 0.03;rotnormalize =5*np.pi/180 ; 
     meshfile = r"C:\Users\dhruv\Desktop\680Final\data\CADmodels\006_mustard_bottle\textured.ply"
     framework = Bayesian6D(config, imagemean, imagestd, modelweights, transnormalize, rotnormalize, meshfile)

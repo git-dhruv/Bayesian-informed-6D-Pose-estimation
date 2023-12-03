@@ -151,7 +151,7 @@ class train(pl.LightningModule):
             angularVel_reg = torch.norm(rot, dim=-1).mean()
             tloss = self.tLoss(trans, vDT)
             rloss = self.rLoss(rot, rlPose)
-            loss =  tloss + 12*rloss + 3*angularVel_reg  #TODO Add weights from config
+            loss =  tloss + 12*rloss + angularVel_reg  #TODO Add weights from config
             self.loss+=(loss); self.itr+=1
             
 
