@@ -57,7 +57,7 @@ class train(pl.LightningModule):
         self.logdir = opj(ROOT, 'logs')
 
         ## Dataset setup ##        
-        isSynth = 1; maxLen = 15000; dataConfig = ""; classId = 5; datatype = 1        
+        isSynth = 1; maxLen = 25000; dataConfig = ""; classId = 5; datatype = 1        
         labeltransform= {'translation': self.transnorm, 'rotation': self.rotnorm}        
         self.loader = ycbloader.dataloader(dataDir,isSynth, datatype, dataConfig, None, labeltransform, classId, maxLen)
         isSynth = 1; maxLen = 100; dataConfig = ""; classId = 5; datatype = 0        
@@ -148,10 +148,10 @@ class train(pl.LightningModule):
             self.loss+=(loss); self.itr+=1
             return loss 
         else:
-            regularization_term = torch.norm(torch.diff(rot, dim=0), dim=-1).mean()
+            angularVel_reg = torch.norm(rot, dim=-1).mean()
             tloss = self.tLoss(trans, vDT)
             rloss = self.rLoss(rot, rlPose)
-            loss =  tloss + 12*rloss + regularization_term  #TODO Add weights from config
+            loss =  tloss + 12*rloss + 3*angularVel_reg  #TODO Add weights from config
             self.loss+=(loss); self.itr+=1
             
 
@@ -202,7 +202,7 @@ class train(pl.LightningModule):
     # def val_dataloader(self):
     #     return self.val_dataloader
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=1e-2)
         return optimizer
 
 
@@ -221,7 +221,7 @@ def main()->None:
     trainer = pl.Trainer(
         devices=1, 
         accelerator="gpu", 
-        max_epochs=6
+        max_epochs=10
     )
     checkpoint = torch.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\model_epoch150.pth.tar")    
     framework.model.load_state_dict(checkpoint['state_dict'])
