@@ -1,5 +1,19 @@
 # Bayesian Informed 6D Pose estimation
+
+![intro](notebooks\traj3d.png)
+
+
 We introduce a novel framework for addressing the challenges in 6D pose estimation for pick-and-place manipulation. The proposed vision-based approach leverages a Bayesian combination of SE(3) tracking and SO(3) estimation. This aims to achieve a balance between accuracy and computation time, a common trade-off in existing solutions. Experimental results demonstrate superior performance compared to current state-of-the-art methods, highlighting the proposed framework's effectiveness in high-frequency pose estimation. This is the code base for the project. 
+
+# Project Components
+## Novel Depth Simulator
+![intro](static\depthsim.gif)
+
+## ESKF based 6D Pose estimation
+<p align="center">
+  <img src="static/6DPose.gif" alt="6DPose" style="width: 48%; display: inline-block;" />
+  <img src="static/Trajectories.gif" alt="Trajectories" style="width: 48%; display: inline-block;" />
+</p>
 
 
 ## Setup
@@ -46,40 +60,6 @@ You are ready to run the code now! Please ensure that the paths are setup correc
 ```
 python3 src\main.py
 ```
-
-
-## Code Structure
-|-- classical_6d
-|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- 6D Pose estimation (Classical) Pipeline
-|
-|-- configurations
-|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- Configuration Files
-|
-|-- logs
-|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- Log Files generated from inference. Don't confuse these with lightning logs!
-|
-|-- models
-|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- Neural Networks that are used in inference
-|
-|-- notebooks
-|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- Contains data preprocessing, depth simulator, and result generation script
-|
-|-- results
-|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- Stored various plots for report
-|
-|-- src
-|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- Utils
-|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- Dataloader
-|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- Inference
-|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- Kalman Filter
-|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- Renderer
-|
-|-- training
-|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- Training pipeline
-|
-|-- weights
-|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|-- Saved Weights
-
 
 ## Bugs
 As of now we don't have a bug reporting mechanism setup. Please feel free to email the authors, we are more than happy to help you. Please be aware that we do not guarentee any support for MacOS due to our limited knowledge. 

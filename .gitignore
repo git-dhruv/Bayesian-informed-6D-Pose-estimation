@@ -4,8 +4,9 @@ iros20-6d-pose-tracking/*
 weights/*
 
 *checkpoints*
-*pth*
-*pt*
+*pth
+*npy
+*pt
 *mp4*
 *png*
 *logs*
