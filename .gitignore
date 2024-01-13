@@ -7,5 +7,7 @@ weights/*
 *pth*
 *pt*
 *mp4*
-
+*png*
 *logs*
+
+*pycache*

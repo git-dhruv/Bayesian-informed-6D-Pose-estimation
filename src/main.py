@@ -22,20 +22,22 @@ import torch.nn as nn
 import yaml
 from copy import deepcopy
 from scipy.spatial.transform import Rotation
+import datetime, os
 
 ## Custom Module ##
 from processDepth import depthCompletion
 from ycbloader import dataloader
 
 
-sys.path.append(r"C:\Users\dhruv\Desktop\680Final\iros20-6d-pose-tracking")
+sys.path.append(r"C:\Users\dhruv\Desktop\680Final\models")
 
-import se3_tracknet
+import network
 from render import VispyRenderer
 import trimesh
 from manipulation import *
 import utils
 from kf_utils import HandleStates
+from celluloid import Camera
 
 
 class Bayesian6D:
@@ -50,7 +52,7 @@ class Bayesian6D:
         - Metrics are required but not a priority
     """
     
-    def __init__(self, config, imagemean, imagestd, modelweights, transnormalize, rotnormalize, meshfile):
+    def __init__(self, config, imagemean, imagestd, modelweights, transnormalize, rotnormalize, meshfile, logFolder):
         """
         
         """
@@ -65,10 +67,13 @@ class Bayesian6D:
         cam_cfg = config['camera']
         self.K = np.array([cam_cfg['focalX'], 0, cam_cfg['centerX'], 0, cam_cfg['focalY'], cam_cfg['centerY'], 0,0,1]).reshape(3,3)
 
-        self.model = se3_tracknet.Se3TrackNet(self.network_in_size[0])
+        self.model = network.Se3TrackNet(self.network_in_size[0])
         
         checkpoint = torch.load(modelweights)
-        self.model.load_state_dict(checkpoint['state_dict'])
+        try:
+            self.model.load_state_dict(checkpoint['state_dict'])
+        except:
+            self.model.load_state_dict(checkpoint)
         self.model = self.model.cuda()
         self.model.eval()
 
@@ -86,7 +91,7 @@ class Bayesian6D:
         mode = 0
         config = "" #Where do we use this config file
         labeltransform = None
-        maxLen = 1000
+        maxLen = None
         self.loadData = dataloader(root, mode, datatype, config, imagetransforms, labeltransform, classId, maxLen)
 
         self.transnormalize = transnormalize
@@ -103,6 +108,13 @@ class Bayesian6D:
         
 
         self.predlogs = []
+        fig = plt.figure()
+        self.axs = fig.gca()
+        self.camera = Camera(fig)
+
+        self.logFolder = logFolder
+
+
 
     def renderObject(self, CV_H_Ob):
         '''
@@ -134,7 +146,7 @@ class Bayesian6D:
         rgb, depth = self.inputModification.cropImage(rgb, depth, pose, scale = (1000,1000,1000))
         
 
-        # depth = self.depthfix.fillDepth(depth) #Makes surreal difference (inactive till robust pipeline made)
+        depth = self.depthfix.fillDepth(depth) #Makes surreal difference (inactive till robust pipeline made)
         # self.visualize_depth_image(depth)
 
         tmp = transforms.Compose([OffsetDepthDhruv(), NormalizeChannelsReal(self.mean, self.std)])
@@ -165,15 +177,25 @@ class Bayesian6D:
     
     def visualizePrediction(self, pose, rgb, wndname='Prediction' ):
         #Transform PCL using Pose
-        model = deepcopy(self.pointcloud)
-        model.transform(pose)
+        # model = deepcopy(self.pointcloud)
+        # model.transform(pose)
 
-        uvs = self.imgOps.bckPrjctFromK(self.K, np.asarray(model.points))
-        cur_bgr = cv2.cvtColor(rgb,cv2.COLOR_RGB2BGR)
-        for ii in range(len(uvs)):
-            cv2.circle(cur_bgr,(uvs[ii,0],uvs[ii,1]),radius=1,color=(0,0,255),thickness=-1)
-        cv2.imshow(wndname,cur_bgr)        
-        cv2.waitKey(1)
+        pts = deepcopy(np.asarray(self.pointcloud.points))
+        pts = np.column_stack((pts, np.ones((pts.shape[0],1))))
+        pts = pose.dot(pts.T)
+
+
+        uvs = self.imgOps.bckPrjctFromK(self.K, pts[:3,:].T)
+        if wndname is not None:
+            cur_bgr = cv2.cvtColor(rgb,cv2.COLOR_RGB2BGR)
+            for ii in range(len(uvs)):
+                cv2.circle(cur_bgr,(uvs[ii,0],uvs[ii,1]),radius=1,color=(0,0,255),thickness=-1)
+            cv2.imshow(wndname,cur_bgr)
+            cur_rgb = cv2.cvtColor(cur_bgr,cv2.COLOR_BGR2RGB)
+            self.axs.imshow(cur_rgb) #        ; plt.show()
+            self.camera.snap()
+            cv2.waitKey(1)
+        return uvs
             
     def visualize_depth_image(self,depth_image):
         """
@@ -214,9 +236,15 @@ class Bayesian6D:
         B_in_cam[:3,:3] = A2B_in_cam_rot.dot(A_in_cam[:3,:3])
         return B_in_cam
 
-
+    def logVar(self, fileName, var):
+        fileName = os.path.join(self.logFolder, fileName)
+        np.save(fileName, var)
     def runPipeline(self):
         self.poseErr = []
+        self.reprjErr = []
+
+        self.statePoses = []
+        self.gtPoses = []
 
         train_loader = torch.utils.data.DataLoader(self.loadData, shuffle=False, batch_size=1)
         for idx, data in enumerate(train_loader):
@@ -226,21 +254,51 @@ class Bayesian6D:
             pose = self.singlePass(pose, rgb.clone(), depth.clone())
             
 
-            if idx%10==0:
-                self.states.measurement(gt[0].cpu().numpy())
-                st = self.states.fetchState()
-                pose = self.lieUtils.makeHomoTransform(st[:3], st[3:])
+            if idx%9==0:
+                rot_noise_scale = 2*np.pi/180; translation_noise_scale = 5e-3
+                rot_perturb_A = Rotation.from_rotvec((np.random.random(size=(3,)) - 0.5)*rot_noise_scale).as_quat()
+                trans_perturb_A = (np.random.random(size=(3,)) - 0.5)*translation_noise_scale
+                noisy_lie_algebra_A = self.lieUtils.makeHomoTransform(trans_perturb_A, rot_perturb_A)
+                pose = noisy_lie_algebra_A@gt[0].cpu().numpy()     #
+                self.firstPassCompl = 0
+                
+                # self.states.measurement(pose)
+                # st = self.states.fetchState()
+                # pose = self.lieUtils.makeHomoTransform(st[:3], st[3:])
 
-            # self.visualizePrediction(pose, rgb[0].numpy())
+
+            predicted_px = self.visualizePrediction(pose, rgb[0].numpy())
             self.poseErr.append(np.linalg.inv(pose)@gt[0].cpu().numpy())
-            # self.visualizePrediction(gt[0].cpu().numpy(), rgb[0].numpy(), 'GT')
+            gt_px = self.visualizePrediction(gt[0].cpu().numpy(), rgb[0].numpy(), None)
+            self.reprjErr.append( np.abs(predicted_px - gt_px).mean(axis=0) )
+
+            self.statePoses.append(np.linalg.inv(pose))
+            self.gtPoses.append(np.linalg.inv(gt[0]))
+            
+
+
+        self.logVar('reprj.npy', np.array(self.reprjErr))
+        self.logVar('gtPoses.npy', np.array(self.gtPoses))
+        self.logVar('statePoses.npy', np.array(self.statePoses))
+        
+        animation = self.camera.animate()
+        animation.save(os.path.join(self.logFolder,'out.mp4'), fps=30)
 
         plt.figure()
         plt.plot(self.predlogs)
         plt.show()
+
+        self.reprjErr = np.array(self.reprjErr)
+        fig, axs = plt.subplots(2, 1, figsize=(15, 10))
+        axs[0].plot(self.reprjErr[:,0], '.')
+        axs[1].plot(self.reprjErr[:,1], '.')
+        plt.show()
         
         trns = np.array([i[:3,-1] for i in self.poseErr])
         rots = np.array([Rotation.from_matrix(i[:3,:3]).as_rotvec()*180/np.pi for i in self.poseErr])
+
+        np.save(os.path.join(self.logFolder, 'trnsErr.npy'),trns)
+        np.save(os.path.join(self.logFolder, 'rotErr.npy'),rots)
 
         fig, axs = plt.subplots(2, 3, figsize=(15, 10))
 
@@ -273,16 +331,23 @@ class Bayesian6D:
 
 
 def main()->None:    
+    runstart = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    logDir = r'C:\Users\dhruv\Desktop\680Final\logs'
+    folder = os.path.join(logDir, runstart)
+    print("Making Log Folder at ", folder)
+    os.mkdir(folder)
+
+
     config = r"C:\Users\dhruv\Desktop\680Final\data\mustard_bottle\dataset_info.yml" 
     with open(config,'r') as ff:
         config = yaml.safe_load(ff)
     imagemean = np.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\mean.npy")
     imagestd = np.load(r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\std.npy")
     modelweights = r"C:\Users\dhruv\Desktop\680Final\weights\YCB_weights\mustard_bottle\model_epoch150.pth.tar"
-    modelweights = r"C:\Users\dhruv\Desktop\680Final\model.pth.tar"
-    transnormalize = 0.03;rotnormalize =5*np.pi/180 ; 
+    # modelweights = r"C:\Users\dhruv\Desktop\680Final\se3tracknet_good_performance.pth"
+    transnormalize = 0.03;rotnormalize = 5*np.pi/180; 
     meshfile = r"C:\Users\dhruv\Desktop\680Final\data\CADmodels\006_mustard_bottle\textured.ply"
-    framework = Bayesian6D(config, imagemean, imagestd, modelweights, transnormalize, rotnormalize, meshfile)
+    framework = Bayesian6D(config, imagemean, imagestd, modelweights, transnormalize, rotnormalize, meshfile, folder)
     framework.runPipeline()
     
 

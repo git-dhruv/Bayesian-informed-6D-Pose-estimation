@@ -90,3 +90,19 @@ RGB normalizations of mean and std are weird. Training on the raw synthetic data
 
 ## 19th Nov Update:
 New depth network. I just realized I was not using max pooling operations. So we were just using CNNs without downsampling which makes less sense. Anyways, we get the same performance. Training pipeline is complete. I am now bored with the project since I got better results. 
+
+
+
+## 28th Nov Update
+I tried using reprojection error as one of the losses, but it didn't work. I don't know why though. 
+
+## 3rd Dec
+Made the Point Cloud Differentiable and tried the reprojection loss. It still doesnt work. I need to work on a smaller problem to verify the integrity of the loss function. Unfortunately, the inference methods require me to train on the large data, else there is the overfit problem. 
+
+Abandoning this idea, and trying to make the network gradient better by regularizing on the weights and Diff of SE3. To be very honest, this is the maximum performance we can possibly extract from this model. Current recorded boost is 71% but I wanted a better squeeze. 
+
+Feels like Regularizing on Rotation is too harsh for the network. Scaling it down. The problem is that the rotations are almost non changing when we use. Reduced magnitude from 3 to 0.05. It still feels harsh. 
+
+
+## Wrapping up
+Project close to completion. Add an awesome readme and wrap up. 
