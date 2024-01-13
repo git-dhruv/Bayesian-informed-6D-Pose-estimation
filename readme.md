@@ -1,13 +1,13 @@
 # Bayesian Informed 6D Pose estimation
 
-![intro](notebooks\traj3d.png)
+![intro](notebooks/traj3d.png)
 
 
 We introduce a novel framework for addressing the challenges in 6D pose estimation for pick-and-place manipulation. The proposed vision-based approach leverages a Bayesian combination of SE(3) tracking and SO(3) estimation. This aims to achieve a balance between accuracy and computation time, a common trade-off in existing solutions. Experimental results demonstrate superior performance compared to current state-of-the-art methods, highlighting the proposed framework's effectiveness in high-frequency pose estimation. This is the code base for the project. 
 
 # Project Components
 ## Novel Depth Simulator
-![intro](static\depthsim.gif)
+![intro](static/depthsim.gif)
 
 ## ESKF based 6D Pose estimation
 <p align="center">
