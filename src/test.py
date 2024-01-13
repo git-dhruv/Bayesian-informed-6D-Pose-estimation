@@ -51,8 +51,11 @@ for i in A:
         trans = i[:3,-1].reshape(1,-1)
     else:
         trans = np.row_stack((trans,i[:3,-1].reshape(1,-1)))
-print(np.std(trans, axis=0))
+import matplotlib.pyplot as plt
 
+print(trans.shape)
+plt.hist(trans[:,0], )
+plt.show()
 
 
 trans = None

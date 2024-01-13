@@ -20,7 +20,7 @@ def quaternion_to_matrix(quaternion):
     Returns:
     np.array: The corresponding matrix.
     """
-    qx, qy, qz, qw = quaternion
+    qw, qx, qy, qz = quaternion
 
     # Constructing the matrix
     matrix = np.array([[-qx, -qy, -qz],
@@ -28,12 +28,12 @@ def quaternion_to_matrix(quaternion):
                        [qz, qw, -qx],
                        [-qy, qx, qw]])
 
-    matrix = np.array([
-        [qw, -qz, qy],
-        [qz, qw, -qx],
-        [-qy, qx, qw],
-        [-qx, -qy, -qz]
-    ])
+    # matrix = np.array([
+    #     [qw, -qz, qy],
+    #     [qz, qw, -qx],
+    #     [-qy, qx, qw],
+    #     [-qx, -qy, -qz]
+    # ])
 
     # print(matrix)
     matrix = np.array([[1,0,0],[0,1,0],[0,0,1],[0,0,0]])
@@ -46,9 +46,9 @@ class HandleStates:
         print("Estimator initialized with ", self.state)
 
         #Populating the noise matrices - Please put in the config file later!
-        self.errCov = np.eye(6,6)*1e10 #Whatever idgaf now
-        self.Q = np.diag([1e-2, 1e-2, 1e-2, 1e-3, 1e-3, 1e-3])*1e4
-        self.R = np.diag([1e-2, 1e-2, 1e-2, 1e-3, 1e-3, 1e-3, 1e-3])*1e5
+        self.errCov = np.eye(6,6) #Whatever idgaf now
+        self.Q = np.diag([1e-2, 1e-2, 1e-2, 1e-3, 1e-3, 1e-3])*1e3
+        self.R = np.diag([5e-2, 5e-2, 5e-2, 0.08, 0.08, 0.08, 0.08])*5e3
 
         # Lie group utils 
         self.lieUtils = lieGroup()
@@ -76,7 +76,7 @@ class HandleStates:
         H = np.eye(7,7)
         Xdtheta = np.zeros((7,6))
         Xdtheta[:3,:3] = np.eye(3)
-        Xdtheta[3:,3:] = quaternion_to_matrix(self.state[3:].flatten())/2
+        Xdtheta[3:,3:] = quaternion_to_matrix(self.state[3:].flatten())*10
         H = H@Xdtheta
 
         #Kalman Gain 
@@ -92,9 +92,6 @@ class HandleStates:
 
         # A more stable covariance update
         self.errCov = (np.eye(6,6)-K@H)@P@(np.eye(6,6)-K@H).T + K@(self.R)@K.T
-        # import matplotlib.pyplot as plt
-        # plt.imshow(self.errCov)
-        # plt.show()
         self._updateNomState(errState, msm=1)
 
     def _updateNomState(self, errstate, msm=0):

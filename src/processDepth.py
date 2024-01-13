@@ -112,13 +112,13 @@ def main()->None:
         [0, 0, 1, 1, 1, 0, 0],
         [0, 0, 0, 1, 0, 0, 0],
     ], dtype=np.uint8)
-    FULL_KERNEL_5 = np.ones((5, 5), np.uint8)
+    FULL_KERNEL_5 = np.ones((1, 5), np.uint8)
     FULL_KERNEL_7 = np.ones((7, 7), np.uint8)
     FULL_KERNEL_17 = np.ones((17, 17), np.uint8)
 
 
     img_color = cv2.imread(r"data\0050\color\000000.png", cv2.IMREAD_UNCHANGED)
-    img_depth = cv2.imread(r"data\0050\depth\000000.png", cv2.IMREAD_UNCHANGED)
+    img_depth = cv2.imread(r"C:\Users\dhruv\Desktop\680Final\data\mustard_bottle\train_data_blender_DR\0010012depthB_fake.png", cv2.IMREAD_UNCHANGED)
     ##### Depth Completion Declaration and calling ####
     processDepth = depthCompletion(5, custom_kernel, FULL_KERNEL_5, FULL_KERNEL_7, FULL_KERNEL_17)
     out = processDepth.fillDepth(img_depth)
@@ -184,7 +184,7 @@ def main()->None:
 
     # Display or save the corrupted images
     mask = depth_image_with_sp==0
-    out[mask] = 0
+    out[mask] = out.min()
     plt.imshow(out); plt.show()
 
 

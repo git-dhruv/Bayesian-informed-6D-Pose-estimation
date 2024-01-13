@@ -45,17 +45,19 @@ def handlePath(root, isSynthetic, classId=5, mode=0)-> Dict[str, Any]:
     if isSynthetic:
         if mode == 0:
             root = opj(root,"validation_data_blender_DR")
+            depthB = "depthB.png"
         else:
+            depthB = "depthB_fake.png"
             root = opj(root, "train_data_blender_DR")
         data['rgbA'] = sorted(glob.glob(opj(root, '*rgbA.png')))
         data['rgbB'] = sorted(glob.glob(opj(root, '*rgbB.png')))
         data['depthA'] = sorted(glob.glob(opj(root, '*depthA.png')))
-        data['depthB'] = sorted(glob.glob(opj(root, '*depthB_fake.png')))
+        data['depthB'] = sorted(glob.glob(opj(root, f'*{depthB}')))
         data['npzFiles'] = sorted(glob.glob(opj(root, '*meta.npz')))
         datalen = len(data['rgbA'])
     else:
         data['rgb'] = sorted(glob.glob(opj(root, 'color/*.png')))
-        data['depth'] = sorted(glob.glob(opj(root, 'depth_filled/*.png')))
+        data['depth'] = sorted(glob.glob(opj(root, 'depth/*.png')))
         data['pose_gt'] = sorted(glob.glob(opj(root, f'pose_gt/{classId}/*.txt')))
         data['K'] = [opj(root, "cam_K.txt")]
         datalen = len(data['rgb'])
@@ -71,7 +73,6 @@ class dataloader(Dataset):
     """
     Dataloader for the YCB Data
     """
-
     def __init__(self, root : str, mode : bool, datatype : bool, config : str, datatransform : transforms.Compose,labeltransform : transforms.Compose, classId = 5, maxLen = None)->None:
         """
         Dataloader class for YCB Data
