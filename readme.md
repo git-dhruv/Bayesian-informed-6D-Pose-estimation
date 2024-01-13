@@ -60,6 +60,8 @@ You are ready to run the code now! Please ensure that the paths are setup correc
 ```
 python3 src\main.py
 ```
+## Classical Pose estimation
+It is important to note that the classical pose estimation code is not included in the repository due to licensing issues. Instead the following code relies on noisy ground truth to demonstrate effectiveness. You can use PoseCNN or whatever in place of that. 
 
 ## Bugs
 As of now we don't have a bug reporting mechanism setup. Please feel free to email the authors, we are more than happy to help you. Please be aware that we do not guarentee any support for MacOS due to our limited knowledge. 
